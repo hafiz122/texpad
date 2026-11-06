@@ -20,10 +20,17 @@ let renderTimer;
 let renderedSvg = null;
 let exporting = false;
 let vimView = null;
-let previousCursor = null;
 let getVimCM;
 let vimModules;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const trailContext = vimTrail.getContext('2d');
+let cursorTarget = null;
+let cursorPosition = null;
+let cursorFrame = 0;
+let lastCursorFrame = 0;
+let cursorCanvasWidth = 0;
+let cursorCanvasHeight = 0;
+let cursorResizeObserver = null;
 
 function getSource() {
   return vimView ? vimView.state.doc.toString() : input.value;
@@ -116,57 +123,120 @@ function scheduleRender() {
   renderTimer = setTimeout(() => renderMath(sequence), 220);
 }
 
-function updateCursorTrail(view) {
-  if (!view || view !== vimView || !view.hasFocus) {
-    previousCursor = null;
+function sizeCursorCanvas() {
+  const bounds = vimTrail.getBoundingClientRect();
+  const ratio = Math.min(window.devicePixelRatio || 1, 3);
+  const width = Math.max(1, Math.round(bounds.width * ratio));
+  const height = Math.max(1, Math.round(bounds.height * ratio));
+  if (vimTrail.width !== width || vimTrail.height !== height) {
+    vimTrail.width = width;
+    vimTrail.height = height;
+  }
+  cursorCanvasWidth = bounds.width;
+  cursorCanvasHeight = bounds.height;
+  trailContext.setTransform(width / bounds.width, 0, 0, height / bounds.height, 0, 0);
+  return bounds;
+}
+
+function hideSmoothCursor() {
+  if (cursorFrame) cancelAnimationFrame(cursorFrame);
+  cursorFrame = 0;
+  lastCursorFrame = 0;
+  cursorTarget = null;
+  cursorPosition = null;
+  vimShell.classList.remove('smooth-cursor-active');
+  trailContext?.clearRect(0, 0, cursorCanvasWidth, cursorCanvasHeight);
+}
+
+function drawSmoothCursor() {
+  const cursor = cursorPosition;
+  trailContext.clearRect(0, 0, cursorCanvasWidth, cursorCanvasHeight);
+  const headX = cursor.x + cursor.width / 2;
+  const headY = cursor.y + cursor.height / 2;
+  const length = Math.hypot(headX - cursor.tailX, headY - cursor.tailY);
+  if (length > 2) {
+    const gradient = trailContext.createLinearGradient(cursor.tailX, cursor.tailY, headX, headY);
+    gradient.addColorStop(0, 'rgba(0, 0, 170, 0)');
+    gradient.addColorStop(1, 'rgba(0, 0, 170, 0.28)');
+    trailContext.strokeStyle = gradient;
+    trailContext.lineWidth = Math.max(3, cursor.width);
+    trailContext.beginPath();
+    trailContext.moveTo(cursor.tailX, cursor.tailY);
+    trailContext.lineTo(headX, headY);
+    trailContext.stroke();
+  }
+  if (cursor.insertMode) {
+    trailContext.fillStyle = '#0000aa';
+    trailContext.fillRect(cursor.x, cursor.y, 2, cursor.height);
+  } else {
+    trailContext.fillStyle = 'rgba(0, 0, 170, 0.28)';
+    trailContext.fillRect(cursor.x, cursor.y, cursor.width, cursor.height);
+    trailContext.strokeStyle = '#0000aa';
+    trailContext.lineWidth = 1;
+    trailContext.strokeRect(cursor.x + 0.5, cursor.y + 0.5, cursor.width - 1, cursor.height - 1);
+  }
+}
+
+function animateSmoothCursor(time) {
+  cursorFrame = 0;
+  if (!cursorTarget || !cursorPosition) return;
+  const elapsed = lastCursorFrame ? Math.min(time - lastCursorFrame, 48) : 16.7;
+  lastCursorFrame = time;
+  const headEase = 1 - Math.exp(-elapsed / 52);
+  const tailEase = 1 - Math.exp(-elapsed / 86);
+  for (const key of ['x', 'y', 'width', 'height']) {
+    cursorPosition[key] += (cursorTarget[key] - cursorPosition[key]) * headEase;
+  }
+  cursorPosition.tailX += (cursorPosition.x + cursorPosition.width / 2 - cursorPosition.tailX) * tailEase;
+  cursorPosition.tailY += (cursorPosition.y + cursorPosition.height / 2 - cursorPosition.tailY) * tailEase;
+  cursorPosition.insertMode = cursorTarget.insertMode;
+  drawSmoothCursor();
+
+  const headGap = Math.hypot(cursorTarget.x - cursorPosition.x, cursorTarget.y - cursorPosition.y);
+  const tailGap = Math.hypot(cursorPosition.x + cursorPosition.width / 2 - cursorPosition.tailX,
+    cursorPosition.y + cursorPosition.height / 2 - cursorPosition.tailY);
+  if (headGap > 0.15 || tailGap > 0.3
+    || Math.abs(cursorTarget.width - cursorPosition.width) > 0.15
+    || Math.abs(cursorTarget.height - cursorPosition.height) > 0.15) {
+    cursorFrame = requestAnimationFrame(animateSmoothCursor);
+  }
+}
+
+function updateCursorTarget(view, snap = false) {
+  if (!trailContext || !view || view !== vimView || !view.hasFocus || reducedMotion.matches) {
+    hideSmoothCursor();
     return;
   }
-
   const caret = view.coordsAtPos(view.state.selection.main.head);
   if (!caret) return;
-  const shell = vimShell.getBoundingClientRect();
+  const canvas = sizeCursorCanvas();
   const insertMode = Boolean(getVimCM(view)?.state.vim?.insertMode);
-  const cursor = {
-    x: caret.left - shell.left,
-    y: caret.top - shell.top,
+  const target = {
+    x: caret.left - canvas.left,
+    y: caret.top - canvas.top,
     width: insertMode ? 2 : Math.max(7, view.defaultCharacterWidth),
     height: Math.max(12, caret.bottom - caret.top),
+    insertMode,
   };
-
-  if (previousCursor && !reducedMotion.matches) {
-    const distance = Math.hypot(cursor.x - previousCursor.x, cursor.y - previousCursor.y);
-    if (distance > 1 && distance < 1000) {
-      const duration = distance < view.defaultCharacterWidth * 2.5 ? 60 : 150;
-      for (let index = 0; index < 3; index += 1) {
-        const piece = document.createElement('span');
-        piece.className = 'vim-trail-piece';
-        piece.style.width = `${cursor.width}px`;
-        piece.style.height = `${cursor.height}px`;
-        vimTrail.append(piece);
-        const animation = piece.animate([
-          { transform: `translate(${previousCursor.x}px, ${previousCursor.y}px)`, opacity: 0.28 - index * 0.07 },
-          { transform: `translate(${cursor.x}px, ${cursor.y}px)`, opacity: 0 },
-        ], {
-          duration: duration + index * 35,
-          delay: index * 12,
-          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-          fill: 'forwards',
-        });
-        animation.onfinish = () => piece.remove();
-      }
-      while (vimTrail.childElementCount > 12) vimTrail.firstElementChild.remove();
-    }
+  const jump = cursorPosition ? Math.hypot(target.x - cursorPosition.x, target.y - cursorPosition.y) : 0;
+  if (!cursorPosition || snap || jump > 260) {
+    cursorPosition = { ...target, tailX: target.x + target.width / 2, tailY: target.y + target.height / 2 };
   }
-  previousCursor = cursor;
+  cursorTarget = target;
+  vimShell.classList.add('smooth-cursor-active');
+  if (!cursorFrame) cursorFrame = requestAnimationFrame(animateSmoothCursor);
 }
+
+reducedMotion.addEventListener('change', () => updateCursorTarget(vimView, true));
 
 async function toggleVimMode() {
   if (vimView) {
     input.value = vimView.state.doc.toString();
+    cursorResizeObserver?.disconnect();
+    cursorResizeObserver = null;
+    hideSmoothCursor();
     vimView.destroy();
     vimView = null;
-    vimTrail.replaceChildren();
-    previousCursor = null;
     vimShell.hidden = true;
     vimHelp.hidden = true;
     input.hidden = false;
@@ -198,24 +268,30 @@ async function toggleVimMode() {
         EditorView.updateListener.of((update) => {
           if (update.docChanged) scheduleRender();
           if (update.selectionSet || update.docChanged) {
-            requestAnimationFrame(() => updateCursorTrail(update.view));
+            requestAnimationFrame(() => updateCursorTarget(update.view));
           }
         }),
       ],
       parent: vimMount,
     });
     const view = vimView;
-    view.scrollDOM.addEventListener('scroll', () => { previousCursor = null; }, { passive: true });
-    view.dom.addEventListener('focusout', () => { previousCursor = null; });
+    cursorResizeObserver = new ResizeObserver(() => updateCursorTarget(view, true));
+    cursorResizeObserver.observe(vimShell);
+    view.scrollDOM.addEventListener('scroll', () => updateCursorTarget(view, true), { passive: true });
+    view.dom.addEventListener('focusin', () => requestAnimationFrame(() => updateCursorTarget(view, true)));
+    view.dom.addEventListener('focusout', hideSmoothCursor);
     getCM(view)?.on('vim-mode-change', () => {
-      requestAnimationFrame(() => updateCursorTrail(view));
+      requestAnimationFrame(() => updateCursorTarget(view));
     });
     vimToggle.setAttribute('aria-pressed', 'true');
     vimToggle.textContent = 'Vim mode: on';
     view.focus();
-    requestAnimationFrame(() => updateCursorTrail(view));
+    requestAnimationFrame(() => updateCursorTarget(view, true));
   } catch {
     vimModules = null;
+    cursorResizeObserver?.disconnect();
+    cursorResizeObserver = null;
+    hideSmoothCursor();
     vimView?.destroy();
     vimView = null;
     vimShell.hidden = true;
