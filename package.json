@@ -9,6 +9,8 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@replit/codemirror-vim": "^6.4.0",
+    "codemirror": "^6.0.2",
     "jspdf": "4.2.1"
   },
   "devDependencies": {

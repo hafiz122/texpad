@@ -2,6 +2,8 @@
 
 A one-equation LaTeX editor. It renders math with MathJax and downloads white-background PDF, PNG, and JPG files in the browser.
 
+Select **Vim mode** beside the equation field for Vim keybindings and an animated cursor trail. Press `i` to insert text and `Esc` to return to normal mode. Switching modes keeps the equation and preview. The trail is disabled when the device requests reduced motion.
+
 ## Run locally
 
 ```sh

@@ -2,6 +2,11 @@ import { jsPDF } from 'jspdf';
 import './style.css';
 
 const input = document.querySelector('#latex-input');
+const vimToggle = document.querySelector('#vim-toggle');
+const vimShell = document.querySelector('#vim-editor-shell');
+const vimMount = document.querySelector('#vim-editor');
+const vimTrail = document.querySelector('#vim-cursor-trail');
+const vimHelp = document.querySelector('#vim-help');
 const exampleButton = document.querySelector('#example-button');
 const preview = document.querySelector('#preview-output');
 const previewState = document.querySelector('#preview-state');
@@ -14,6 +19,15 @@ let renderSequence = 0;
 let renderTimer;
 let renderedSvg = null;
 let exporting = false;
+let vimView = null;
+let previousCursor = null;
+let getVimCM;
+let vimModules;
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+function getSource() {
+  return vimView ? vimView.state.doc.toString() : input.value;
+}
 
 function normalizeMath(source) {
   let math = source.trim();
@@ -57,7 +71,7 @@ async function mathJaxReady() {
 }
 
 async function renderMath(sequence) {
-  const math = normalizeMath(input.value);
+  const math = normalizeMath(getSource());
   if (!math) {
     renderedSvg = null;
     preview.innerHTML = emptyMarkup;
@@ -100,6 +114,118 @@ function scheduleRender() {
   renderedSvg = null;
   setDownloadsEnabled(false);
   renderTimer = setTimeout(() => renderMath(sequence), 220);
+}
+
+function updateCursorTrail(view) {
+  if (!view || view !== vimView || !view.hasFocus) {
+    previousCursor = null;
+    return;
+  }
+
+  const caret = view.coordsAtPos(view.state.selection.main.head);
+  if (!caret) return;
+  const shell = vimShell.getBoundingClientRect();
+  const insertMode = Boolean(getVimCM(view)?.state.vim?.insertMode);
+  const cursor = {
+    x: caret.left - shell.left,
+    y: caret.top - shell.top,
+    width: insertMode ? 2 : Math.max(7, view.defaultCharacterWidth),
+    height: Math.max(12, caret.bottom - caret.top),
+  };
+
+  if (previousCursor && !reducedMotion.matches) {
+    const distance = Math.hypot(cursor.x - previousCursor.x, cursor.y - previousCursor.y);
+    if (distance > 1 && distance < 1000) {
+      const duration = distance < view.defaultCharacterWidth * 2.5 ? 60 : 150;
+      for (let index = 0; index < 3; index += 1) {
+        const piece = document.createElement('span');
+        piece.className = 'vim-trail-piece';
+        piece.style.width = `${cursor.width}px`;
+        piece.style.height = `${cursor.height}px`;
+        vimTrail.append(piece);
+        const animation = piece.animate([
+          { transform: `translate(${previousCursor.x}px, ${previousCursor.y}px)`, opacity: 0.28 - index * 0.07 },
+          { transform: `translate(${cursor.x}px, ${cursor.y}px)`, opacity: 0 },
+        ], {
+          duration: duration + index * 35,
+          delay: index * 12,
+          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+          fill: 'forwards',
+        });
+        animation.onfinish = () => piece.remove();
+      }
+      while (vimTrail.childElementCount > 12) vimTrail.firstElementChild.remove();
+    }
+  }
+  previousCursor = cursor;
+}
+
+async function toggleVimMode() {
+  if (vimView) {
+    input.value = vimView.state.doc.toString();
+    vimView.destroy();
+    vimView = null;
+    vimTrail.replaceChildren();
+    previousCursor = null;
+    vimShell.hidden = true;
+    vimHelp.hidden = true;
+    input.hidden = false;
+    vimToggle.setAttribute('aria-pressed', 'false');
+    vimToggle.textContent = 'Vim mode: off';
+    input.focus();
+    return;
+  }
+
+  vimToggle.disabled = true;
+  vimToggle.textContent = 'Loading Vim…';
+  try {
+    vimModules ??= Promise.all([import('codemirror'), import('@replit/codemirror-vim')]);
+    const [{ basicSetup, EditorView }, { getCM, vim }] = await vimModules;
+    getVimCM = getCM;
+    vimShell.hidden = false;
+    input.hidden = true;
+    vimHelp.hidden = false;
+    vimView = new EditorView({
+      doc: input.value,
+      extensions: [
+        vim({ status: true }),
+        basicSetup,
+        EditorView.lineWrapping,
+        EditorView.contentAttributes.of({
+          'aria-label': 'Enter equation, Vim mode',
+          'aria-describedby': 'vim-help input-help',
+        }),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) scheduleRender();
+          if (update.selectionSet || update.docChanged) {
+            requestAnimationFrame(() => updateCursorTrail(update.view));
+          }
+        }),
+      ],
+      parent: vimMount,
+    });
+    const view = vimView;
+    view.scrollDOM.addEventListener('scroll', () => { previousCursor = null; }, { passive: true });
+    view.dom.addEventListener('focusout', () => { previousCursor = null; });
+    getCM(view)?.on('vim-mode-change', () => {
+      requestAnimationFrame(() => updateCursorTrail(view));
+    });
+    vimToggle.setAttribute('aria-pressed', 'true');
+    vimToggle.textContent = 'Vim mode: on';
+    view.focus();
+    requestAnimationFrame(() => updateCursorTrail(view));
+  } catch {
+    vimModules = null;
+    vimView?.destroy();
+    vimView = null;
+    vimShell.hidden = true;
+    vimHelp.hidden = true;
+    input.hidden = false;
+    vimToggle.textContent = 'Vim mode: off';
+    updateStatus('Vim mode could not load. Check your connection and try again.', 'error');
+  } finally {
+    vimToggle.disabled = false;
+  }
 }
 
 function makeStandaloneSvg(svg, width, height) {
@@ -204,10 +330,16 @@ async function download(format) {
 }
 
 input.addEventListener('input', scheduleRender);
+vimToggle.addEventListener('click', toggleVimMode);
 exampleButton.addEventListener('click', () => {
-  input.value = example;
-  input.focus();
-  scheduleRender();
+  if (vimView) {
+    vimView.dispatch({ changes: { from: 0, to: vimView.state.doc.length, insert: example } });
+    vimView.focus();
+  } else {
+    input.value = example;
+    input.focus();
+    scheduleRender();
+  }
 });
 for (const button of exportButtons) {
   button.addEventListener('click', () => download(button.dataset.format));

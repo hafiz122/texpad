@@ -30,8 +30,16 @@
               <h2 id="input-title">LaTeX source</h2>
               <span class="panel-detail">Math only</span>
             </div>
-            <label class="input-label" for="latex-input">Enter equation:</label>
+            <div class="input-controls">
+              <label class="input-label" for="latex-input">Enter equation:</label>
+              <button id="vim-toggle" class="mode-toggle" type="button" aria-pressed="false" aria-controls="vim-editor-shell">Vim mode: off</button>
+            </div>
             <textarea id="latex-input" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-describedby="input-help" placeholder="\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}"></textarea>
+            <div id="vim-editor-shell" class="vim-editor-shell" hidden>
+              <div id="vim-editor"></div>
+              <div id="vim-cursor-trail" class="vim-cursor-trail" aria-hidden="true"></div>
+            </div>
+            <p id="vim-help" class="vim-help" hidden>Esc: normal mode. i: insert mode. h, j, k, l: move the cursor.</p>
             <div class="editor-bottom">
               <p id="input-help">No document preamble needed. $ delimiters are optional.</p>
               <button id="example-button" class="text-button" type="button">Insert example</button>
