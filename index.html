@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f3f4ef" />
+    <meta name="theme-color" content="#d9d9d9" />
     <meta name="description" content="Write one LaTeX math equation and download it as a PDF, PNG, or JPG." />
     <title>Texpad · Math to PDF, PNG, JPG</title>
     <script>
@@ -17,66 +17,53 @@
   <body>
     <div class="site-shell">
       <header class="site-header">
-        <div class="brand" aria-label="Texpad">tex<span>pad</span><span class="brand-period">.</span></div>
-        <p>One equation at a time</p>
+        <h1>Texpad</h1>
+        <p>LaTeX equation editor</p>
       </header>
 
       <main class="main-content">
-        <div class="intro">
-          <div>
-            <p class="eyebrow">Math workspace</p>
-            <h1>Make room for the math.</h1>
-          </div>
-          <p class="intro-note">Type LaTeX, check the result, and download a clean copy.</p>
-        </div>
+        <p class="instructions">Write one math equation. The preview updates as you type, then you can save it as a PDF, PNG, or JPG.</p>
 
         <div class="workspace">
           <section class="editor-panel" aria-labelledby="input-title">
             <div class="panel-heading">
-              <div>
-                <p class="panel-index">01 / Write</p>
-                <h2 id="input-title">LaTeX input</h2>
-              </div>
-              <span class="panel-detail">Math mode</span>
+              <h2 id="input-title">LaTeX source</h2>
+              <span class="panel-detail">Math only</span>
             </div>
-            <label class="input-label" for="latex-input">Equation source</label>
+            <label class="input-label" for="latex-input">Enter equation:</label>
             <textarea id="latex-input" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-describedby="input-help" placeholder="\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}"></textarea>
             <div class="editor-bottom">
-              <p id="input-help">No document preamble needed. You can paste math with or without $ delimiters.</p>
+              <p id="input-help">No document preamble needed. $ delimiters are optional.</p>
               <button id="example-button" class="text-button" type="button">Insert example</button>
             </div>
           </section>
 
           <section class="preview-panel" aria-labelledby="preview-title">
             <div class="panel-heading">
-              <div>
-                <p class="panel-index">02 / Preview</p>
-                <h2 id="preview-title">Your equation</h2>
-              </div>
+              <h2 id="preview-title">Preview</h2>
               <span id="preview-state" class="preview-state">Waiting for input</span>
             </div>
             <div class="preview-scroll" role="region" tabindex="0" aria-label="Rendered equation preview; scroll for long equations">
               <div id="preview-output" class="preview-output">
                 <div class="empty-state">
-                  <span class="empty-symbol" aria-hidden="true">∫</span>
-                  <p>Your equation will appear here.</p>
+                  <p>Type an equation to see its preview.</p>
                 </div>
               </div>
             </div>
             <div class="export-area">
               <div class="export-copy">
-                <p class="panel-index">03 / Save</p>
-                <p>White background · one equation</p>
+                <strong>Save equation:</strong>
+                <span>White background</span>
               </div>
               <div class="export-buttons" aria-label="Download formats">
-                <button class="export-button" type="button" data-format="pdf" aria-label="Download PDF" disabled>PDF</button>
-                <button class="export-button" type="button" data-format="png" aria-label="Download PNG" disabled>PNG</button>
-                <button class="export-button" type="button" data-format="jpg" aria-label="Download JPG" disabled>JPG</button>
+                <button class="export-button" type="button" data-format="pdf" aria-label="Download PDF" disabled>Save PDF</button>
+                <button class="export-button" type="button" data-format="png" aria-label="Download PNG" disabled>Save PNG</button>
+                <button class="export-button" type="button" data-format="jpg" aria-label="Download JPG" disabled>Save JPG</button>
               </div>
             </div>
           </section>
         </div>
-        <p id="status" class="status" role="status" aria-live="polite">Enter an equation to begin.</p>
+        <div class="status-bar"><strong>Status:</strong><p id="status" class="status" role="status" aria-live="polite">Enter an equation to begin.</p></div>
       </main>
     </div>
     <script type="module" src="/src/main.js"></script>

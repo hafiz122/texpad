@@ -9,7 +9,7 @@ const status = document.querySelector('#status');
 const exportButtons = [...document.querySelectorAll('.export-button')];
 
 const example = String.raw`\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}`;
-const emptyMarkup = '<div class="empty-state"><span class="empty-symbol" aria-hidden="true">∫</span><p>Your equation will appear here.</p></div>';
+const emptyMarkup = '<div class="empty-state"><p>Type an equation to see its preview.</p></div>';
 let renderSequence = 0;
 let renderTimer;
 let renderedSvg = null;
