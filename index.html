@@ -32,7 +32,12 @@
             </div>
             <div class="input-controls">
               <label class="input-label" for="latex-input">Enter equation:</label>
-              <button id="vim-toggle" class="mode-toggle" type="button" aria-pressed="false" aria-controls="vim-editor-shell">Vim mode: off</button>
+              <div class="editor-controls">
+                <label id="vim-theme-control" class="theme-control" for="vim-theme" hidden>Theme:
+                  <select id="vim-theme" aria-label="Vim editor theme"></select>
+                </label>
+                <button id="vim-toggle" class="mode-toggle" type="button" aria-pressed="false" aria-controls="vim-editor-shell">Vim mode: off</button>
+              </div>
             </div>
             <textarea id="latex-input" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-describedby="input-help" placeholder="\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}"></textarea>
             <div id="vim-editor-shell" class="vim-editor-shell" hidden>

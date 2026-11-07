@@ -7,6 +7,8 @@ const vimShell = document.querySelector('#vim-editor-shell');
 const vimMount = document.querySelector('#vim-editor');
 const vimTrail = document.querySelector('#vim-cursor-trail');
 const vimHelp = document.querySelector('#vim-help');
+const themeControl = document.querySelector('#vim-theme-control');
+const themeSelect = document.querySelector('#vim-theme');
 const exampleButton = document.querySelector('#example-button');
 const preview = document.querySelector('#preview-output');
 const previewViewport = document.querySelector('.preview-scroll');
@@ -25,6 +27,12 @@ let exporting = false;
 let vimView = null;
 let getVimCM;
 let vimModules;
+let themeTools;
+let themeCompartment;
+let selectedTheme = 'default';
+let cursorColor = '#e0e2ea';
+let cursorWash = 'rgba(224, 226, 234, 0.28)';
+let cursorClear = 'rgba(224, 226, 234, 0)';
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const trailContext = vimTrail.getContext('2d');
 let cursorTarget = null;
@@ -174,6 +182,13 @@ function hideSmoothCursor() {
   trailContext?.clearRect(0, 0, cursorCanvasWidth, cursorCanvasHeight);
 }
 
+function setCursorColor(hex) {
+  cursorColor = hex;
+  const channels = [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16));
+  cursorWash = `rgba(${channels.join(', ')}, 0.28)`;
+  cursorClear = `rgba(${channels.join(', ')}, 0)`;
+}
+
 function drawSmoothCursor() {
   const cursor = cursorPosition;
   trailContext.clearRect(0, 0, cursorCanvasWidth, cursorCanvasHeight);
@@ -182,8 +197,8 @@ function drawSmoothCursor() {
   const length = Math.hypot(headX - cursor.tailX, headY - cursor.tailY);
   if (length > 2) {
     const gradient = trailContext.createLinearGradient(cursor.tailX, cursor.tailY, headX, headY);
-    gradient.addColorStop(0, 'rgba(0, 0, 170, 0)');
-    gradient.addColorStop(1, 'rgba(0, 0, 170, 0.28)');
+    gradient.addColorStop(0, cursorClear);
+    gradient.addColorStop(1, cursorWash);
     trailContext.strokeStyle = gradient;
     trailContext.lineWidth = Math.max(3, cursor.width);
     trailContext.beginPath();
@@ -192,12 +207,12 @@ function drawSmoothCursor() {
     trailContext.stroke();
   }
   if (cursor.insertMode) {
-    trailContext.fillStyle = '#0000aa';
+    trailContext.fillStyle = cursorColor;
     trailContext.fillRect(cursor.x, cursor.y, 2, cursor.height);
   } else {
-    trailContext.fillStyle = 'rgba(0, 0, 170, 0.28)';
+    trailContext.fillStyle = cursorWash;
     trailContext.fillRect(cursor.x, cursor.y, cursor.width, cursor.height);
-    trailContext.strokeStyle = '#0000aa';
+    trailContext.strokeStyle = cursorColor;
     trailContext.lineWidth = 1;
     trailContext.strokeRect(cursor.x + 0.5, cursor.y + 0.5, cursor.width - 1, cursor.height - 1);
   }
@@ -255,6 +270,19 @@ function updateCursorTarget(view, snap = false) {
 
 reducedMotion.addEventListener('change', () => updateCursorTarget(vimView, true));
 
+themeSelect.addEventListener('change', () => {
+  if (!themeTools) return;
+  const theme = themeTools.getTheme(themeSelect.value);
+  selectedTheme = theme.name;
+  themeTools.applyTheme(vimShell, theme);
+  setCursorColor(theme.colors.cursor);
+  if (vimView) {
+    vimView.dispatch({ effects: themeCompartment.reconfigure(themeTools.themeHighlighting(theme)) });
+    updateCursorTarget(vimView, true);
+  }
+  try { window.localStorage.setItem('texpad.vimTheme', theme.name); } catch { /* Storage may be disabled. */ }
+});
+
 async function toggleVimMode() {
   if (vimView) {
     input.value = vimView.state.doc.toString();
@@ -265,6 +293,7 @@ async function toggleVimMode() {
     vimView = null;
     vimShell.hidden = true;
     vimHelp.hidden = true;
+    themeControl.hidden = true;
     input.hidden = false;
     vimToggle.setAttribute('aria-pressed', 'false');
     vimToggle.textContent = 'Vim mode: off';
@@ -275,17 +304,30 @@ async function toggleVimMode() {
   vimToggle.disabled = true;
   vimToggle.textContent = 'Loading Vim…';
   try {
-    vimModules ??= Promise.all([import('codemirror'), import('@replit/codemirror-vim')]);
-    const [{ basicSetup, EditorView }, { getCM, vim }] = await vimModules;
+    vimModules ??= Promise.all([import('codemirror'), import('@replit/codemirror-vim'), import('./vim-theme.js')]);
+    const [{ basicSetup, EditorView }, { getCM, vim }, loadedThemeTools] = await vimModules;
     getVimCM = getCM;
+    themeTools = loadedThemeTools;
+    if (!themeSelect.options.length) themeTools.fillThemePicker(themeSelect);
+    let savedTheme = selectedTheme;
+    try { savedTheme = window.localStorage.getItem('texpad.vimTheme') || savedTheme; } catch { /* Storage may be disabled. */ }
+    const theme = themeTools.getTheme(savedTheme);
+    selectedTheme = theme.name;
+    themeSelect.value = theme.name;
+    themeTools.applyTheme(vimShell, theme);
+    setCursorColor(theme.colors.cursor);
+    themeCompartment = new themeTools.Compartment();
     vimShell.hidden = false;
     input.hidden = true;
     vimHelp.hidden = false;
+    themeControl.hidden = false;
     vimView = new EditorView({
       doc: input.value,
       extensions: [
         vim({ status: true }),
         basicSetup,
+        themeTools.latexLanguage,
+        themeCompartment.of(themeTools.themeHighlighting(theme)),
         EditorView.lineWrapping,
         EditorView.contentAttributes.of({
           'aria-label': 'Enter equation, Vim mode',
@@ -322,6 +364,7 @@ async function toggleVimMode() {
     vimView = null;
     vimShell.hidden = true;
     vimHelp.hidden = true;
+    themeControl.hidden = true;
     input.hidden = false;
     vimToggle.textContent = 'Vim mode: off';
     updateStatus('Vim mode could not load. Check your connection and try again.', 'error');
