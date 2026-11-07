@@ -137,7 +137,7 @@ textarea::placeholder { color: #555; opacity: 1; }
 .preview-scroll {
   display: flex;
   align-items: center;
-  min-height: 373px;
+  height: 373px;
   margin: 12px;
   overflow: auto;
   border: 2px inset #c2c2c2;
@@ -196,7 +196,7 @@ textarea::placeholder { color: #555; opacity: 1; }
   textarea { min-height: 230px; }
   .vim-editor-shell .cm-editor { height: 230px; }
   .vim-editor-shell .cm-content { min-height: 180px; }
-  .preview-scroll { min-height: 260px; }
+  .preview-scroll { height: 260px; }
 }
 
 @media (max-width: 520px) {

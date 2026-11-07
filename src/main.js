@@ -9,6 +9,7 @@ const vimTrail = document.querySelector('#vim-cursor-trail');
 const vimHelp = document.querySelector('#vim-help');
 const exampleButton = document.querySelector('#example-button');
 const preview = document.querySelector('#preview-output');
+const previewViewport = document.querySelector('.preview-scroll');
 const previewState = document.querySelector('#preview-state');
 const status = document.querySelector('#status');
 const exportButtons = [...document.querySelectorAll('.export-button')];
@@ -18,6 +19,8 @@ const emptyMarkup = '<div class="empty-state"><p>Type an equation to see its pre
 let renderSequence = 0;
 let renderTimer;
 let renderedSvg = null;
+let renderedOutput = null;
+let renderedSize = null;
 let exporting = false;
 let vimView = null;
 let getVimCM;
@@ -64,6 +67,18 @@ function setDownloadsEnabled(enabled) {
   for (const button of exportButtons) button.disabled = !enabled;
 }
 
+function fitPreview() {
+  if (!renderedOutput || !renderedSize) return;
+  const style = getComputedStyle(preview);
+  const availableWidth = previewViewport.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const availableHeight = previewViewport.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  const scale = Math.max(0.35, Math.min(1, availableWidth / renderedSize.width, availableHeight / renderedSize.height));
+  renderedOutput.style.fontSize = `${180 * scale}%`;
+  previewState.textContent = scale < 0.99 ? `Ready · ${Math.round(scale * 100)}%` : 'Ready';
+}
+
+new ResizeObserver(fitPreview).observe(previewViewport);
+
 async function mathJaxReady() {
   if (document.readyState !== 'complete') {
     await new Promise((resolve) => window.addEventListener('load', resolve, { once: true }));
@@ -81,6 +96,8 @@ async function renderMath(sequence) {
   const math = normalizeMath(getSource());
   if (!math) {
     renderedSvg = null;
+    renderedOutput = null;
+    renderedSize = null;
     preview.innerHTML = emptyMarkup;
     previewState.textContent = 'Waiting for input';
     updateStatus('Enter an equation to begin.');
@@ -101,13 +118,20 @@ async function renderMath(sequence) {
       throw new Error('Check the LaTeX syntax and try again.');
     }
     preview.replaceChildren(output);
+    const bounds = svg.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) throw new Error('The equation has no visible size.');
     renderedSvg = svg;
+    renderedOutput = output;
+    renderedSize = { width: bounds.width, height: bounds.height };
     previewState.textContent = 'Ready';
+    fitPreview();
     updateStatus('Equation ready to download.', 'ready');
     setDownloadsEnabled(true);
   } catch (error) {
     if (sequence !== renderSequence) return;
     renderedSvg = null;
+    renderedOutput = null;
+    renderedSize = null;
     preview.innerHTML = '<p class="error-state">This equation could not be typeset. Check the LaTeX and try again.</p>';
     previewState.textContent = 'Check input';
     updateStatus(error.message || 'Could not typeset the equation.', 'error');
@@ -119,6 +143,8 @@ function scheduleRender() {
   const sequence = ++renderSequence;
   clearTimeout(renderTimer);
   renderedSvg = null;
+  renderedOutput = null;
+  renderedSize = null;
   setDownloadsEnabled(false);
   renderTimer = setTimeout(() => renderMath(sequence), 220);
 }
@@ -318,10 +344,9 @@ function makeStandaloneSvg(svg, width, height) {
   return new XMLSerializer().serializeToString(clone);
 }
 
-async function rasterize(svg) {
-  const bounds = svg.getBoundingClientRect();
-  const width = Math.ceil(bounds.width);
-  const height = Math.ceil(bounds.height);
+async function rasterize(svg, size) {
+  const width = Math.ceil(size.width);
+  const height = Math.ceil(size.height);
   if (!width || !height) throw new Error('The equation has no visible size to export.');
 
   const padding = 32;
@@ -374,12 +399,12 @@ function downloadBlob(blob, filename) {
 }
 
 async function download(format) {
-  if (!renderedSvg || exporting) return;
+  if (!renderedSvg || !renderedSize || exporting) return;
   exporting = true;
   setDownloadsEnabled(false);
   updateStatus(`Preparing ${format.toUpperCase()}…`, 'loading');
   try {
-    const { canvas, logicalWidth, logicalHeight } = await rasterize(renderedSvg);
+    const { canvas, logicalWidth, logicalHeight } = await rasterize(renderedSvg, renderedSize);
     if (format === 'pdf') {
       const pageWidth = logicalWidth * 0.75;
       const pageHeight = logicalHeight * 0.75;
