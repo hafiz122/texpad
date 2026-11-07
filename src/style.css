@@ -29,6 +29,20 @@ button:disabled { cursor: not-allowed; }
   background: var(--vim-site-header);
 }
 .site-title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.header-tools { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 9px 14px; }
+.mode-nav { display: flex; gap: 4px; }
+.mode-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 5px 10px;
+  border: 2px solid var(--vim-site-border);
+  color: var(--vim-site-accent);
+  font: bold 13px Arial, Helvetica, sans-serif;
+  text-decoration: underline;
+}
+.mode-nav a[aria-current='page'] { border-color: var(--vim-site-bevel-dark) var(--vim-site-bevel-light) var(--vim-site-bevel-light) var(--vim-site-bevel-dark); background: var(--vim-site-button-active); color: var(--vim-site-foreground); text-decoration: none; }
+.mode-nav a:focus-visible { outline: 2px solid var(--vim-site-accent); outline-offset: 2px; }
 h1 { margin: 0; font-size: 32px; line-height: 1.1; }
 .site-header p { margin: 0; font-size: 15px; }
 .main-content { padding: 16px 18px 18px; }
@@ -211,18 +225,101 @@ textarea::placeholder { color: var(--vim-site-muted); opacity: 1; }
 .status { margin: 0; }
 .status[data-kind='error'] { color: var(--vim-site-error); }
 
+.notes-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.notes-heading span { font-size: 13px; }
+.notes-intro { margin: -4px 0 12px; font-size: 14px; }
+.notes-storage-warning { margin: 0 0 10px; padding: 8px 10px; border: 2px solid var(--vim-site-error); color: var(--vim-site-error); font-size: 14px; }
+.notes-workspace { display: grid; grid-template-columns: 214px minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.notes-sidebar, .notes-main { min-width: 0; border: 2px solid; border-color: var(--vim-site-bevel-light) var(--vim-site-bevel-dark) var(--vim-site-bevel-dark) var(--vim-site-bevel-light); background: var(--vim-site-panel); }
+.notes-sidebar-actions { display: grid; gap: 7px; padding: 10px; border-bottom: 1px solid var(--vim-site-border); }
+.notes-sidebar-actions label { font-size: 14px; font-weight: bold; }
+.notes-sidebar input, .notes-title-row input, .notes-mobile-picker select { min-width: 0; min-height: 36px; padding: 6px 8px; border: 2px solid var(--vim-site-border); border-radius: 0; background: var(--vim-site-field); color: var(--vim-site-foreground); }
+.notes-sidebar input::placeholder { color: var(--vim-site-muted); }
+.classic-button, .notes-view-tabs button { min-height: 36px; padding: 6px 10px; border: 2px solid; border-color: var(--vim-site-bevel-light) var(--vim-site-bevel-dark) var(--vim-site-bevel-dark) var(--vim-site-bevel-light); border-radius: 0; background: var(--vim-site-button); color: var(--vim-site-foreground); font: bold 13px Arial, Helvetica, sans-serif; }
+.classic-button:hover:not(:disabled), .notes-view-tabs button:hover { background: var(--vim-site-button-hover); }
+.classic-button:active:not(:disabled), .notes-view-tabs button[aria-selected='true'] { border-color: var(--vim-site-bevel-dark) var(--vim-site-bevel-light) var(--vim-site-bevel-light) var(--vim-site-bevel-dark); background: var(--vim-site-button-active); }
+.classic-button:disabled { opacity: 0.55; }
+.classic-button:focus-visible, .notes-view-tabs button:focus-visible, .notes-sidebar input:focus-visible, .notes-title-row input:focus-visible, .notes-mobile-picker select:focus-visible, .notes-list button:focus-visible { outline: 2px solid var(--vim-site-accent); outline-offset: 2px; }
+.notes-list { list-style: none; margin: 0; padding: 4px; max-height: 650px; overflow: auto; }
+.notes-list li { margin: 0; }
+.notes-list button { display: block; width: 100%; min-height: 48px; padding: 7px 8px; border: 1px solid transparent; background: transparent; color: var(--vim-site-foreground); cursor: pointer; text-align: left; }
+.notes-list button:hover { background: var(--vim-site-button-hover); }
+.notes-list button[aria-current='true'] { border-color: var(--vim-site-border); background: var(--vim-site-button-active); }
+.notes-list strong, .notes-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notes-list small { margin-top: 3px; color: var(--vim-site-muted); }
+.notes-list-empty { padding: 12px; font-size: 13px; }
+.notes-main { padding: 10px; }
+.notes-empty { display: grid; min-height: 400px; place-items: center; text-align: center; }
+.notes-empty p { max-width: 28ch; }
+.notes-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.notes-mobile-picker, .notes-view-tabs { display: none; }
+.notes-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.notes-title-row label { font-weight: bold; }
+.notes-title-row input { flex: 1; font-size: 17px; font-weight: bold; }
+.notes-editor-preview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.notes-pane { min-width: 0; border: 1px solid var(--vim-site-border); background: var(--vim-site-field); }
+.notes-pane .panel-heading { min-height: 44px; align-items: center; padding: 5px 9px; }
+.notes-pane h3 { margin: 0; font-size: 16px; }
+.notes-pane .mode-toggle { min-height: 34px; }
+#notes-body, #notes-vim-shell { width: calc(100% - 16px); margin: 8px; min-height: 410px; }
+#notes-body { padding: 10px; }
+#notes-vim-shell .cm-editor { height: 410px; }
+.notes-editor-help { margin: 0 8px 8px; font-size: 12px; line-height: 1.4; }
+.notes-preview { min-height: 465px; padding: 16px; overflow-wrap: anywhere; line-height: 1.5; }
+.notes-preview > :first-child { margin-top: 0; }
+.notes-preview > :last-child { margin-bottom: 0; }
+.notes-preview h1, .notes-preview h2, .notes-preview h3 { margin: 1em 0 0.3em; }
+.notes-preview h1 { font-size: 25px; }
+.notes-preview h2 { font-size: 21px; }
+.notes-preview h3 { font-size: 18px; }
+.notes-preview p, .notes-preview ul, .notes-preview ol, .notes-preview blockquote { margin: 0.55em 0; }
+.notes-preview pre { padding: 8px; overflow: auto; border: 1px solid var(--vim-site-border); background: var(--vim-site-panel); }
+.notes-preview code { font-family: 'Courier New', Courier, monospace; }
+.notes-preview a { color: var(--vim-site-accent); }
+.notes-preview blockquote { padding-left: 12px; border-left: 3px solid var(--vim-site-border); }
+.notes-preview table { max-width: 100%; border-collapse: collapse; overflow: auto; }
+.notes-preview th, .notes-preview td { padding: 4px 7px; border: 1px solid var(--vim-site-border); }
+.notes-math { display: inline-block; max-width: 100%; vertical-align: middle; }
+.notes-math[data-display='true'] { display: block; margin: 0.7em 0; overflow-x: auto; text-align: center; }
+.notes-math mjx-container { margin: 0 !important; }
+.notes-math-error { color: var(--vim-site-error); font-family: 'Courier New', Courier, monospace; }
+.notes-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding-top: 10px; }
+.notes-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+#notes-save-state[data-kind='error'] { color: var(--vim-site-error); font-weight: bold; }
+#notes-delete-dialog { width: min(350px, calc(100vw - 30px)); padding: 16px; border: 2px solid var(--vim-site-border); border-radius: 0; background: var(--vim-site-panel); color: var(--vim-site-foreground); }
+#notes-delete-dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+#notes-delete-dialog p { margin: 0 0 16px; line-height: 1.4; }
+.notes-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+#notes-print { display: none; }
+
 @media (max-width: 960px) {
   .workspace { grid-template-columns: 1fr; }
   textarea { min-height: 230px; }
   .vim-editor-shell .cm-editor { height: 230px; }
   .vim-editor-shell .cm-content { min-height: 180px; }
   .preview-scroll { height: 260px; }
+  .notes-workspace { grid-template-columns: 180px minmax(0, 1fr); }
+  .notes-editor-preview { grid-template-columns: 1fr; }
+  .notes-preview { min-height: 300px; }
+}
+
+@media (max-width: 640px) {
+  .notes-workspace { display: block; }
+  .notes-sidebar { display: none; }
+  .notes-mobile-picker { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+  .notes-mobile-picker select { flex: 1; }
+  .notes-view-tabs { display: flex; gap: 5px; margin-bottom: 9px; }
+  .notes-view-tabs button { flex: 1; min-height: 44px; }
+  .notes-editor-preview { display: block; }
+  #notes-document[data-tab='edit'] #notes-preview-panel, #notes-document[data-tab='preview'] #notes-edit-panel { display: none; }
 }
 
 @media (max-width: 520px) {
   .site-shell { margin: 0; border: 0; }
   .site-header { align-items: start; flex-direction: column; gap: 8px; padding: 12px; }
   .site-title { align-items: start; flex-direction: column; gap: 4px; }
+  .header-tools { width: 100%; justify-content: space-between; }
+  .mode-nav a, .theme-control select { min-height: 44px; }
   .main-content { padding: 12px; }
   .instructions { margin-bottom: 12px; font-size: 15px; }
   .editor-bottom { align-items: start; flex-direction: column; gap: 4px; }
@@ -233,6 +330,31 @@ textarea::placeholder { color: var(--vim-site-muted); opacity: 1; }
   .export-area { align-items: stretch; flex-direction: column; }
   .export-buttons { width: 100%; }
   .export-button { flex: 1; min-width: 0; padding-inline: 5px; font-size: 13px; }
+  .notes-title-row { flex-wrap: wrap; }
+  .notes-title-row input { flex-basis: calc(100% - 50px); }
+  .notes-title-row .classic-button { margin-left: auto; }
+  .notes-mobile-picker .classic-button, .notes-actions .classic-button { min-height: 44px; }
+  .notes-title-row .classic-button, .notes-pane .mode-toggle { min-height: 44px; }
+  .notes-actions { width: 100%; }
+  .notes-actions .classic-button { flex: 1; }
+}
+
+@media print {
+  @page { size: A4 portrait; margin: 18mm; }
+  :root { background: #fff !important; color: #171717 !important; }
+  body.printing-note { background: #fff !important; color: #171717 !important; }
+  body.printing-note .site-shell { display: none !important; }
+  body.printing-note #notes-print { display: block; color: #171717; background: #fff; font: 11pt/1.45 Georgia, 'Times New Roman', serif; overflow-wrap: anywhere; }
+  #notes-print .print-content { min-height: 0; padding: 0; color: #171717; }
+  #notes-print h1 { margin: 0 0 8mm; font-size: 20pt; }
+  #notes-print h2, #notes-print h3, #notes-print .notes-math { break-inside: avoid; }
+  #notes-print pre, #notes-print table { max-width: 100%; overflow: visible; white-space: pre-wrap; }
+  #notes-print pre { background: #fff; border-color: #777; }
+  #notes-print th, #notes-print td, #notes-print blockquote { border-color: #777; }
+  #notes-print .notes-math { color: #171717 !important; max-width: 100%; }
+  #notes-print .notes-math-error { color: #171717; }
+  #notes-print .notes-math svg { max-width: 100%; height: auto; }
+  #notes-print a { color: #171717; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#d9d9d9" />
-    <meta name="description" content="Write one LaTeX math equation and download it as a PDF, PNG, or JPG." />
+    <meta name="description" content="Write LaTeX equations and study notes with live math previews." />
     <title>Texpad · Math to PDF, PNG, JPG</title>
     <script>
       window.MathJax = {
@@ -19,14 +19,21 @@
       <header class="site-header">
         <div class="site-title">
           <h1>Texpad</h1>
-          <p>LaTeX equation editor</p>
+          <p>Math writing workspace</p>
         </div>
-        <label id="vim-theme-control" class="theme-control" for="vim-theme">Theme:
-          <select id="vim-theme" aria-label="Site theme"></select>
-        </label>
+        <div class="header-tools">
+          <nav class="mode-nav" aria-label="Workspace">
+            <a id="equation-link" href="#equation">Equation</a>
+            <a id="notes-link" href="#notes">Notes</a>
+          </nav>
+          <label id="vim-theme-control" class="theme-control" for="vim-theme">Theme:
+            <select id="vim-theme" aria-label="Site theme"></select>
+          </label>
+        </div>
       </header>
 
       <main class="main-content">
+        <section id="equation-view" aria-label="Equation editor">
         <p class="instructions">Write one math equation. The preview updates as you type, then you can save it as a PDF, PNG, or JPG.</p>
 
         <div class="workspace">
@@ -79,8 +86,93 @@
           </section>
         </div>
         <div class="status-bar"><strong>Status:</strong><p id="status" class="status" role="status" aria-live="polite">Enter an equation to begin.</p></div>
+        </section>
+
+        <section id="notes-view" aria-labelledby="notes-title" hidden>
+          <div class="notes-heading">
+            <h2 id="notes-title">Study notes</h2>
+            <span>Saved on this device</span>
+          </div>
+          <p class="notes-intro">Notes stay in this browser. Download Markdown for a backup.</p>
+          <p id="notes-storage-warning" class="notes-storage-warning" role="alert" hidden>Browser storage is unavailable. Your work will last only until this page closes; download Markdown to keep it.</p>
+          <div class="notes-workspace">
+            <aside class="notes-sidebar" aria-label="Your notes">
+              <div class="notes-sidebar-actions">
+                <label for="notes-search">Search notes</label>
+                <input id="notes-search" type="search" placeholder="Title or content" />
+                <button id="notes-new" class="classic-button" type="button">New note</button>
+              </div>
+              <ul id="notes-list" class="notes-list"></ul>
+            </aside>
+            <div class="notes-main">
+              <div class="notes-mobile-picker">
+                <label for="notes-select">Note:</label>
+                <select id="notes-select"></select>
+                <button id="notes-new-mobile" class="classic-button" type="button">New</button>
+              </div>
+              <div id="notes-empty" class="notes-empty">
+                <div>
+                  <p>No notes yet. Create one to start writing, or import a Markdown backup.</p>
+                  <div class="notes-empty-actions">
+                    <button id="notes-new-empty" class="classic-button" type="button">New note</button>
+                    <button id="notes-import-empty" class="classic-button" type="button">Import Markdown</button>
+                  </div>
+                </div>
+              </div>
+              <div id="notes-document" hidden>
+                <div class="notes-title-row">
+                  <label for="notes-name">Title:</label>
+                  <input id="notes-name" type="text" maxlength="120" autocomplete="off" />
+                  <button id="notes-delete" class="classic-button" type="button">Delete</button>
+                </div>
+                <div class="notes-view-tabs" role="tablist" aria-label="Note view">
+                  <button id="notes-edit-tab" type="button" role="tab" aria-selected="true" aria-controls="notes-edit-panel">Edit</button>
+                  <button id="notes-preview-tab" type="button" role="tab" aria-selected="false" aria-controls="notes-preview-panel">Preview</button>
+                </div>
+                <div class="notes-editor-preview">
+                  <section id="notes-edit-panel" class="notes-pane" role="tabpanel" aria-labelledby="notes-edit-tab">
+                    <div class="panel-heading">
+                      <h3 id="notes-edit-heading">Write</h3>
+                      <button id="notes-vim-toggle" class="mode-toggle" type="button" aria-pressed="false" aria-controls="notes-vim-shell">Vim mode: off</button>
+                    </div>
+                    <textarea id="notes-body" spellcheck="true" aria-label="Note text" placeholder="Write Markdown here. Use $...$ or $$...$$ for math."></textarea>
+                    <div id="notes-vim-shell" class="vim-editor-shell" hidden>
+                      <div id="notes-vim-editor"></div>
+                      <canvas id="notes-vim-trail" class="vim-cursor-trail" aria-hidden="true"></canvas>
+                    </div>
+                    <p class="notes-editor-help">Markdown text; $...$ for inline math and $$...$$ for display math.</p>
+                  </section>
+                  <section id="notes-preview-panel" class="notes-pane" role="tabpanel" aria-labelledby="notes-preview-tab">
+                    <div class="panel-heading">
+                      <h3 id="notes-preview-heading">Preview</h3>
+                      <span id="notes-preview-state" role="status" aria-live="polite">Waiting for input</span>
+                    </div>
+                    <div id="notes-preview" class="notes-preview"></div>
+                  </section>
+                </div>
+                <div class="notes-footer">
+                  <span id="notes-save-state" role="status" aria-live="polite">Saved</span>
+                  <div class="notes-actions">
+                    <button id="notes-import" class="classic-button" type="button">Import Markdown</button>
+                    <button id="notes-download" class="classic-button" type="button">Download Markdown</button>
+                    <button id="notes-print-button" class="classic-button" type="button">Print / Save PDF</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <input id="notes-file" type="file" accept=".md,text/markdown,text/plain" hidden />
+          <dialog id="notes-delete-dialog" aria-labelledby="notes-delete-message">
+            <p id="notes-delete-message"></p>
+            <div class="notes-dialog-actions">
+              <button id="notes-delete-cancel" class="classic-button" type="button">Cancel</button>
+              <button id="notes-delete-confirm" class="classic-button" type="button">Delete note</button>
+            </div>
+          </dialog>
+        </section>
       </main>
     </div>
+    <article id="notes-print"></article>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

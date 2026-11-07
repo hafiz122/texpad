@@ -15,6 +15,12 @@ const previewViewport = document.querySelector('.preview-scroll');
 const previewState = document.querySelector('#preview-state');
 const status = document.querySelector('#status');
 const exportButtons = [...document.querySelectorAll('.export-button')];
+const equationView = document.querySelector('#equation-view');
+const notesView = document.querySelector('#notes-view');
+const equationLink = document.querySelector('#equation-link');
+const notesLink = document.querySelector('#notes-link');
+let notesApp;
+let notesLoading;
 
 const example = String.raw`\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}`;
 const emptyMarkup = '<div class="empty-state"><p>Type an equation to see its preview.</p></div>';
@@ -281,6 +287,7 @@ function useTheme(name, persist = false) {
     vimView.dispatch({ effects: themeCompartment.reconfigure(vimThemeTools.themeHighlighting(theme)) });
     updateCursorTarget(vimView, true);
   }
+  notesApp?.onTheme(theme);
   if (persist) {
     try { window.localStorage.setItem('texpad.vimTheme', theme.name); } catch { /* Storage may be disabled. */ }
   }
@@ -490,3 +497,24 @@ exampleButton.addEventListener('click', () => {
 for (const button of exportButtons) {
   button.addEventListener('click', () => download(button.dataset.format));
 }
+
+async function showWorkspace() {
+  const notesMode = window.location.hash === '#notes';
+  equationView.hidden = notesMode;
+  notesView.hidden = !notesMode;
+  equationLink.setAttribute('aria-current', notesMode ? 'false' : 'page');
+  notesLink.setAttribute('aria-current', notesMode ? 'page' : 'false');
+  document.title = notesMode ? 'Texpad · Study notes' : 'Texpad · Math to PDF, PNG, JPG';
+  if (notesMode && !notesApp) {
+    try {
+      notesLoading ??= import('./notes.js').then(({ initNotes }) => initNotes({ getTheme: () => themeTools.getTheme(selectedTheme) }));
+      notesApp = await notesLoading;
+    } catch {
+      notesLoading = null;
+      document.querySelector('#notes-empty').textContent = 'Notes could not load. Reload the page and try again.';
+    }
+  }
+}
+
+window.addEventListener('hashchange', showWorkspace);
+showWorkspace();
