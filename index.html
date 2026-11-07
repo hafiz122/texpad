@@ -17,8 +17,13 @@
   <body>
     <div class="site-shell">
       <header class="site-header">
-        <h1>Texpad</h1>
-        <p>LaTeX equation editor</p>
+        <div class="site-title">
+          <h1>Texpad</h1>
+          <p>LaTeX equation editor</p>
+        </div>
+        <label id="vim-theme-control" class="theme-control" for="vim-theme">Theme:
+          <select id="vim-theme" aria-label="Site theme"></select>
+        </label>
       </header>
 
       <main class="main-content">
@@ -33,9 +38,6 @@
             <div class="input-controls">
               <label class="input-label" for="latex-input">Enter equation:</label>
               <div class="editor-controls">
-                <label id="vim-theme-control" class="theme-control" for="vim-theme" hidden>Theme:
-                  <select id="vim-theme" aria-label="Vim editor theme"></select>
-                </label>
                 <button id="vim-toggle" class="mode-toggle" type="button" aria-pressed="false" aria-controls="vim-editor-shell">Vim mode: off</button>
               </div>
             </div>
@@ -66,7 +68,7 @@
             <div class="export-area">
               <div class="export-copy">
                 <strong>Save equation:</strong>
-                <span>White background</span>
+                <span>White background in downloads</span>
               </div>
               <div class="export-buttons" aria-label="Download formats">
                 <button class="export-button" type="button" data-format="pdf" aria-label="Download PDF" disabled>Save PDF</button>

@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import * as themeTools from './site-theme.js';
 import './style.css';
 
 const input = document.querySelector('#latex-input');
@@ -7,7 +8,6 @@ const vimShell = document.querySelector('#vim-editor-shell');
 const vimMount = document.querySelector('#vim-editor');
 const vimTrail = document.querySelector('#vim-cursor-trail');
 const vimHelp = document.querySelector('#vim-help');
-const themeControl = document.querySelector('#vim-theme-control');
 const themeSelect = document.querySelector('#vim-theme');
 const exampleButton = document.querySelector('#example-button');
 const preview = document.querySelector('#preview-output');
@@ -27,7 +27,7 @@ let exporting = false;
 let vimView = null;
 let getVimCM;
 let vimModules;
-let themeTools;
+let vimThemeTools;
 let themeCompartment;
 let selectedTheme = 'default';
 let cursorColor = '#e0e2ea';
@@ -270,17 +270,28 @@ function updateCursorTarget(view, snap = false) {
 
 reducedMotion.addEventListener('change', () => updateCursorTarget(vimView, true));
 
-themeSelect.addEventListener('change', () => {
-  if (!themeTools) return;
-  const theme = themeTools.getTheme(themeSelect.value);
+function useTheme(name, persist = false) {
+  const theme = themeTools.getTheme(name);
   selectedTheme = theme.name;
-  themeTools.applyTheme(vimShell, theme);
+  themeSelect.value = theme.name;
+  themeTools.applyTheme(document.documentElement, theme);
+  document.querySelector('meta[name="theme-color"]').content = theme.site.page;
   setCursorColor(theme.colors.cursor);
   if (vimView) {
-    vimView.dispatch({ effects: themeCompartment.reconfigure(themeTools.themeHighlighting(theme)) });
+    vimView.dispatch({ effects: themeCompartment.reconfigure(vimThemeTools.themeHighlighting(theme)) });
     updateCursorTarget(vimView, true);
   }
-  try { window.localStorage.setItem('texpad.vimTheme', theme.name); } catch { /* Storage may be disabled. */ }
+  if (persist) {
+    try { window.localStorage.setItem('texpad.vimTheme', theme.name); } catch { /* Storage may be disabled. */ }
+  }
+}
+
+themeTools.fillThemePicker(themeSelect);
+let savedTheme = 'default';
+try { savedTheme = window.localStorage.getItem('texpad.vimTheme') || savedTheme; } catch { /* Storage may be disabled. */ }
+useTheme(savedTheme);
+themeSelect.addEventListener('change', () => {
+  useTheme(themeSelect.value, true);
 });
 
 async function toggleVimMode() {
@@ -293,7 +304,6 @@ async function toggleVimMode() {
     vimView = null;
     vimShell.hidden = true;
     vimHelp.hidden = true;
-    themeControl.hidden = true;
     input.hidden = false;
     vimToggle.setAttribute('aria-pressed', 'false');
     vimToggle.textContent = 'Vim mode: off';
@@ -305,29 +315,22 @@ async function toggleVimMode() {
   vimToggle.textContent = 'Loading Vim…';
   try {
     vimModules ??= Promise.all([import('codemirror'), import('@replit/codemirror-vim'), import('./vim-theme.js')]);
-    const [{ basicSetup, EditorView }, { getCM, vim }, loadedThemeTools] = await vimModules;
+    const [{ basicSetup, EditorView }, { getCM, vim }, loadedVimThemeTools] = await vimModules;
     getVimCM = getCM;
-    themeTools = loadedThemeTools;
-    if (!themeSelect.options.length) themeTools.fillThemePicker(themeSelect);
-    let savedTheme = selectedTheme;
-    try { savedTheme = window.localStorage.getItem('texpad.vimTheme') || savedTheme; } catch { /* Storage may be disabled. */ }
-    const theme = themeTools.getTheme(savedTheme);
-    selectedTheme = theme.name;
-    themeSelect.value = theme.name;
-    themeTools.applyTheme(vimShell, theme);
+    vimThemeTools = loadedVimThemeTools;
+    const theme = themeTools.getTheme(selectedTheme);
     setCursorColor(theme.colors.cursor);
-    themeCompartment = new themeTools.Compartment();
+    themeCompartment = new vimThemeTools.Compartment();
     vimShell.hidden = false;
     input.hidden = true;
     vimHelp.hidden = false;
-    themeControl.hidden = false;
     vimView = new EditorView({
       doc: input.value,
       extensions: [
         vim({ status: true }),
         basicSetup,
-        themeTools.latexLanguage,
-        themeCompartment.of(themeTools.themeHighlighting(theme)),
+        vimThemeTools.latexLanguage,
+        themeCompartment.of(vimThemeTools.themeHighlighting(theme)),
         EditorView.lineWrapping,
         EditorView.contentAttributes.of({
           'aria-label': 'Enter equation, Vim mode',
@@ -364,7 +367,6 @@ async function toggleVimMode() {
     vimView = null;
     vimShell.hidden = true;
     vimHelp.hidden = true;
-    themeControl.hidden = true;
     input.hidden = false;
     vimToggle.textContent = 'Vim mode: off';
     updateStatus('Vim mode could not load. Check your connection and try again.', 'error');
