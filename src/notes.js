@@ -1,6 +1,7 @@
 import { Marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { openDB } from 'idb';
+import { templateFor } from './latex-templates.js';
 
 const element = (id) => document.getElementById(id);
 const list = element('notes-list');
@@ -11,6 +12,8 @@ const documentPanel = element('notes-document');
 const nameInput = element('notes-name');
 const bodyInput = element('notes-body');
 const preview = element('notes-preview');
+const pdfPreview = element('notes-pdf-preview');
+const compileError = element('notes-compile-error');
 const previewState = element('notes-preview-state');
 const saveState = element('notes-save-state');
 const storageWarning = element('notes-storage-warning');
@@ -21,6 +24,9 @@ const vimToggle = element('notes-vim-toggle');
 const vimShell = element('notes-vim-shell');
 const vimMount = element('notes-vim-editor');
 const vimTrail = element('notes-vim-trail');
+const templateSelect = element('notes-template');
+const downloadButton = element('notes-download');
+const printButton = element('notes-print-button');
 
 let database;
 let storageError = false;
@@ -38,8 +44,11 @@ let vimHighlighting;
 let cursor;
 let getTheme;
 let pendingDeleteId = null;
+let pdfUrl = null;
+let pdfBytes = null;
 
 function activeNote() { return notes.get(activeId); }
+function formatOf(note) { return note?.format === 'latex' ? 'latex' : 'markdown'; }
 function titleOf(note) { return note.title.trim() || 'Untitled note'; }
 function sortedNotes() { return [...notes.values()].sort((a, b) => b.updatedAt - a.updatedAt || a.title.localeCompare(b.title)); }
 
@@ -51,7 +60,7 @@ function setSaveState(message, kind = 'ready') {
 function storageFailed() {
   storageError = true;
   storageWarning.hidden = false;
-  setSaveState('Not saved — download Markdown to keep this note.', 'error');
+  setSaveState('Not saved — download the source file to keep this note.', 'error');
 }
 
 function rememberActive() {
@@ -99,7 +108,7 @@ function markEdited() {
   if (!note) return;
   note.updatedAt = Date.now();
   revision += 1;
-  setSaveState(database ? 'Saving…' : 'Not saved — download Markdown to keep this note.', database ? 'loading' : 'error');
+  setSaveState(database ? 'Saving…' : 'Not saved — download the source file to keep this note.', database ? 'loading' : 'error');
   renderNoteList();
   clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => saveCurrent(), 500);
@@ -181,10 +190,47 @@ async function mathJaxReady() {
   if (!window.MathJax.tex2svgPromise) throw new Error('MathJax could not load.');
 }
 
+function clearPdfPreview() {
+  pdfBytes = null;
+  pdfPreview.removeAttribute('src');
+  pdfPreview.hidden = true;
+  if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+  pdfUrl = null;
+}
+
+async function renderLatexPreview(note, sequence) {
+  previewState.textContent = 'Compiling LaTeX';
+  printButton.disabled = true;
+  try {
+    const { compileLatex } = await import('./latex-compiler.js');
+    const bytes = await compileLatex(note.body);
+    if (sequence !== renderSequence || note.id !== activeId) return false;
+    const nextUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    clearPdfPreview();
+    pdfUrl = nextUrl;
+    pdfBytes = bytes;
+    pdfPreview.src = pdfUrl;
+    pdfPreview.hidden = false;
+    compileError.hidden = true;
+    previewState.textContent = 'Ready · PDF';
+    printButton.disabled = false;
+    return true;
+  } catch (error) {
+    if (sequence !== renderSequence || note.id !== activeId) return false;
+    clearPdfPreview();
+    element('notes-compile-message').textContent = error.message || 'Check the LaTeX source.';
+    element('notes-compile-log').textContent = error.log || String(error);
+    compileError.hidden = false;
+    previewState.textContent = 'Check LaTeX';
+    return false;
+  }
+}
+
 async function renderPreview() {
   const note = activeNote();
   const sequence = ++renderSequence;
   if (!note) return;
+  if (formatOf(note) === 'latex') return renderLatexPreview(note, sequence);
   const math = [];
   const parser = markdownParser(math);
   const html = parser.parse(note.body);
@@ -231,12 +277,14 @@ async function renderPreview() {
 function schedulePreview() {
   clearTimeout(renderTimer);
   renderSequence += 1;
-  previewState.textContent = 'Updating';
-  renderTimer = window.setTimeout(renderPreview, 180);
+  const latex = formatOf(activeNote()) === 'latex';
+  previewState.textContent = latex ? 'Waiting to compile' : 'Updating';
+  if (latex) printButton.disabled = true;
+  renderTimer = window.setTimeout(renderPreview, latex ? 900 : 180);
 }
 
-function downloadText(text, filename) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
@@ -246,8 +294,14 @@ function downloadText(text, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function downloadText(text, filename) {
+  const type = filename.endsWith('.tex') ? 'application/x-tex;charset=utf-8' : 'text/markdown;charset=utf-8';
+  downloadBlob(new Blob([text], { type }), filename);
+}
+
 function filenameFor(note) {
-  return `${titleOf(note).normalize('NFKD').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'note'}.md`;
+  const base = titleOf(note).normalize('NFKD').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'note';
+  return `${base}.${formatOf(note) === 'latex' ? 'tex' : 'md'}`;
 }
 
 function attachCursor(view, getCM) {
@@ -380,8 +434,9 @@ async function startVim() {
     vimModules ??= Promise.all([
       import('codemirror'), import('@replit/codemirror-vim'), import('@codemirror/lang-markdown'),
       import('@codemirror/language'), import('@lezer/highlight'), import('@codemirror/state'),
+      import('@codemirror/legacy-modes/mode/stex'),
     ]);
-    const [{ basicSetup, EditorView }, { getCM, vim }, { markdown }, { HighlightStyle, syntaxHighlighting }, { tags }, { Compartment }] = await vimModules;
+    const [{ basicSetup, EditorView }, { getCM, vim }, { markdown }, { HighlightStyle, syntaxHighlighting, StreamLanguage }, { tags }, { Compartment }, { stex }] = await vimModules;
     vimCompartment = new Compartment();
     vimHighlighting = (theme) => syntaxHighlighting(HighlightStyle.define([
       { tag: tags.heading, color: theme.colors.command, fontWeight: 'bold' },
@@ -391,12 +446,18 @@ async function startVim() {
       { tag: tags.url, color: theme.colors.number },
       { tag: tags.monospace, color: theme.colors.comment },
       { tag: tags.contentSeparator, color: theme.colors.delimiter },
+      { tag: tags.keyword, color: theme.colors.command },
+      { tag: tags.comment, color: theme.colors.comment },
+      { tag: tags.number, color: theme.colors.number },
+      { tag: tags.bracket, color: theme.colors.delimiter },
     ]));
     vimView = new EditorView({
       doc: bodyInput.value,
       selection: { anchor: bodyInput.selectionStart },
       extensions: [
-        vim({ status: true }), basicSetup, markdown(), vimCompartment.of(vimHighlighting(getTheme())),
+        vim({ status: true }), basicSetup,
+        formatOf(activeNote()) === 'latex' ? StreamLanguage.define(stex) : markdown(),
+        vimCompartment.of(vimHighlighting(getTheme())),
         EditorView.lineWrapping,
         EditorView.contentAttributes.of({ 'aria-label': 'Note text, Vim mode' }),
         EditorView.updateListener.of((update) => {
@@ -458,24 +519,39 @@ async function selectNote(id) {
 
 function showActive() {
   const note = activeNote();
+  clearTimeout(renderTimer);
+  renderSequence += 1;
+  clearPdfPreview();
+  compileError.hidden = true;
   documentPanel.hidden = !note;
   empty.hidden = Boolean(note);
   if (note) {
+    const latex = formatOf(note) === 'latex';
+    element('notes-name-label').textContent = latex ? 'Draft name:' : 'Title:';
     nameInput.value = note.title;
     bodyInput.value = note.body;
+    bodyInput.spellcheck = !latex;
+    bodyInput.placeholder = latex ? 'Write LaTeX here.' : 'Write Markdown here. Use $...$ or $$...$$ for math.';
+    element('notes-editor-help').textContent = latex
+      ? 'Full LaTeX source. Edit \\title in the preamble to change the PDF title. Common packages are bundled.'
+      : 'Markdown text; $...$ for inline math and $$...$$ for display math.';
+    downloadButton.textContent = latex ? 'Download .tex' : 'Download .md';
+    printButton.textContent = latex ? 'Download PDF' : 'Print / Save PDF';
+    printButton.disabled = latex;
+    preview.hidden = latex;
     bodyInput.setSelectionRange(0, 0);
-    setSaveState(database && !storageError ? 'Saved' : 'Not saved — download Markdown to keep this note.', database && !storageError ? 'ready' : 'error');
+    setSaveState(database && !storageError ? 'Saved' : 'Not saved — download the source file to keep this note.', database && !storageError ? 'ready' : 'error');
     renderPreview();
   }
   renderNoteList();
 }
 
-async function newNote(title = 'Untitled note', body = '') {
+async function createNote(title, body, format) {
   await saveCurrent();
   const wasVim = Boolean(vimView);
   if (wasVim) stopVim();
   const now = Date.now();
-  const note = { id: crypto.randomUUID(), title, body, createdAt: now, updatedAt: now };
+  const note = { id: crypto.randomUUID(), title, body, format, createdAt: now, updatedAt: now };
   notes.set(note.id, note);
   activeId = note.id;
   revision += 1;
@@ -484,6 +560,11 @@ async function newNote(title = 'Untitled note', body = '') {
   await saveRecord(note);
   if (wasVim) await startVim();
   else nameInput.focus();
+}
+
+function newNote() {
+  const template = templateFor(templateSelect.value);
+  return createNote(template.title, template.body, template.format);
 }
 
 function requestDelete() {
@@ -513,15 +594,16 @@ async function deleteNote() {
   showActive();
 }
 
-async function importMarkdown(file) {
+async function importNote(file) {
   if (!file) return;
-  if (file.size > 2_000_000) { setSaveState('Markdown file is too large to import.', 'error'); return; }
+  if (file.size > 2_000_000) { setSaveState('Source file is too large to import.', 'error'); return; }
   try {
     const body = await file.text();
-    const title = file.name.replace(/\.md$/i, '').replace(/[-_]+/g, ' ').trim() || 'Imported note';
-    await newNote(title.slice(0, 120), body);
+    const format = /\.tex$/i.test(file.name) ? 'latex' : 'markdown';
+    const title = file.name.replace(/\.(md|tex)$/i, '').replace(/[-_]+/g, ' ').trim() || 'Imported note';
+    await createNote(title.slice(0, 120), body, format);
   } catch {
-    setSaveState('Could not read the Markdown file.', 'error');
+    setSaveState('Could not read the source file.', 'error');
   } finally {
     fileInput.value = '';
   }
@@ -530,6 +612,10 @@ async function importMarkdown(file) {
 async function printNote() {
   const note = activeNote();
   if (!note) return;
+  if (formatOf(note) === 'latex') {
+    if (pdfBytes) downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), filenameFor(note).replace(/\.tex$/, '.pdf'));
+    return;
+  }
   clearTimeout(renderTimer);
   if (!await renderPreview() || note.id !== activeId) return;
   const heading = document.createElement('h1');
@@ -539,6 +625,7 @@ async function printNote() {
   content.classList.add('print-content');
   printArea.replaceChildren(heading, content);
   document.body.classList.add('printing-note');
+  if (document.fonts?.load) await document.fonts.load('11pt "Latin Modern Roman"').catch(() => {});
   window.print();
 }
 
@@ -580,12 +667,12 @@ export async function initNotes(options) {
   });
   element('notes-import').addEventListener('click', () => fileInput.click());
   element('notes-import-empty').addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => importMarkdown(fileInput.files[0]));
-  element('notes-download').addEventListener('click', () => {
+  fileInput.addEventListener('change', () => importNote(fileInput.files[0]));
+  downloadButton.addEventListener('click', () => {
     const note = activeNote();
     if (note) downloadText(note.body, filenameFor(note));
   });
-  element('notes-print-button').addEventListener('click', printNote);
+  printButton.addEventListener('click', printNote);
   for (const tab of ['edit', 'preview']) {
     element(`notes-${tab}-tab`).addEventListener('click', () => {
       documentPanel.dataset.tab = tab;

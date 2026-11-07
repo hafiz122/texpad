@@ -91,10 +91,17 @@
         <section id="notes-view" aria-labelledby="notes-title" hidden>
           <div class="notes-heading">
             <h2 id="notes-title">Study notes</h2>
-            <span>Saved on this device</span>
+            <label class="notes-template-control" for="notes-template">New note template:
+              <select id="notes-template">
+                <option value="study">Study notes (LaTeX)</option>
+                <option value="problems">Problem set (LaTeX)</option>
+                <option value="article">Article (LaTeX)</option>
+                <option value="markdown">Blank Markdown</option>
+              </select>
+            </label>
           </div>
-          <p class="notes-intro">Notes stay in this browser. Download Markdown for a backup.</p>
-          <p id="notes-storage-warning" class="notes-storage-warning" role="alert" hidden>Browser storage is unavailable. Your work will last only until this page closes; download Markdown to keep it.</p>
+          <p class="notes-intro">Saved on this device. Download your source file for a backup. The first LaTeX preview may take a moment to load.</p>
+          <p id="notes-storage-warning" class="notes-storage-warning" role="alert" hidden>Browser storage is unavailable. Your work will last only until this page closes; download the source file to keep it.</p>
           <div class="notes-workspace">
             <aside class="notes-sidebar" aria-label="Your notes">
               <div class="notes-sidebar-actions">
@@ -112,16 +119,16 @@
               </div>
               <div id="notes-empty" class="notes-empty">
                 <div>
-                  <p>No notes yet. Create one to start writing, or import a Markdown backup.</p>
+                  <p>No notes yet. Choose a template to start writing, or import a source file.</p>
                   <div class="notes-empty-actions">
                     <button id="notes-new-empty" class="classic-button" type="button">New note</button>
-                    <button id="notes-import-empty" class="classic-button" type="button">Import Markdown</button>
+                    <button id="notes-import-empty" class="classic-button" type="button">Import .tex / .md</button>
                   </div>
                 </div>
               </div>
               <div id="notes-document" hidden>
                 <div class="notes-title-row">
-                  <label for="notes-name">Title:</label>
+                  <label id="notes-name-label" for="notes-name">Title:</label>
                   <input id="notes-name" type="text" maxlength="120" autocomplete="off" />
                   <button id="notes-delete" class="classic-button" type="button">Delete</button>
                 </div>
@@ -135,12 +142,12 @@
                       <h3 id="notes-edit-heading">Write</h3>
                       <button id="notes-vim-toggle" class="mode-toggle" type="button" aria-pressed="false" aria-controls="notes-vim-shell">Vim mode: off</button>
                     </div>
-                    <textarea id="notes-body" spellcheck="true" aria-label="Note text" placeholder="Write Markdown here. Use $...$ or $$...$$ for math."></textarea>
+                    <textarea id="notes-body" spellcheck="true" aria-label="Note text" placeholder="Write LaTeX here."></textarea>
                     <div id="notes-vim-shell" class="vim-editor-shell" hidden>
                       <div id="notes-vim-editor"></div>
                       <canvas id="notes-vim-trail" class="vim-cursor-trail" aria-hidden="true"></canvas>
                     </div>
-                    <p class="notes-editor-help">Markdown text; $...$ for inline math and $$...$$ for display math.</p>
+                    <p id="notes-editor-help" class="notes-editor-help">Full LaTeX source; the template includes a preamble.</p>
                   </section>
                   <section id="notes-preview-panel" class="notes-pane" role="tabpanel" aria-labelledby="notes-preview-tab">
                     <div class="panel-heading">
@@ -148,20 +155,26 @@
                       <span id="notes-preview-state" role="status" aria-live="polite">Waiting for input</span>
                     </div>
                     <div id="notes-preview" class="notes-preview"></div>
+                    <iframe id="notes-pdf-preview" class="notes-pdf-preview" title="Compiled LaTeX PDF preview" hidden></iframe>
+                    <div id="notes-compile-error" class="notes-compile-error" role="alert" hidden>
+                      <strong>LaTeX could not compile.</strong>
+                      <pre id="notes-compile-message"></pre>
+                      <details><summary>Compilation log</summary><pre id="notes-compile-log"></pre></details>
+                    </div>
                   </section>
                 </div>
                 <div class="notes-footer">
                   <span id="notes-save-state" role="status" aria-live="polite">Saved</span>
                   <div class="notes-actions">
-                    <button id="notes-import" class="classic-button" type="button">Import Markdown</button>
-                    <button id="notes-download" class="classic-button" type="button">Download Markdown</button>
+                    <button id="notes-import" class="classic-button" type="button">Import .tex / .md</button>
+                    <button id="notes-download" class="classic-button" type="button">Download source</button>
                     <button id="notes-print-button" class="classic-button" type="button">Print / Save PDF</button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <input id="notes-file" type="file" accept=".md,text/markdown,text/plain" hidden />
+          <input id="notes-file" type="file" accept=".tex,.md,text/markdown,text/plain,application/x-tex" hidden />
           <dialog id="notes-delete-dialog" aria-labelledby="notes-delete-message">
             <p id="notes-delete-message"></p>
             <div class="notes-dialog-actions">

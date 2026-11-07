@@ -12,9 +12,11 @@
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.2",
     "@codemirror/language": "^6.13.1",
+    "@codemirror/legacy-modes": "^6.5.5",
     "@codemirror/state": "^6.7.6",
     "@lezer/highlight": "^1.2.5",
     "@replit/codemirror-vim": "^6.4.0",
+    "@typeward/texlive-wasm": "0.2.4-alpha",
     "codemirror": "^6.0.2",
     "dompurify": "^3.4.17",
     "idb": "^8.0.4",
