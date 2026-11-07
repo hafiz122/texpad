@@ -18,10 +18,10 @@ button, select { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 
 .site-shell {
-  max-width: 1160px;
-  margin: 14px auto;
-  border: 2px solid;
-  border-color: var(--vim-site-bevel-light) var(--vim-site-bevel-dark) var(--vim-site-bevel-dark) var(--vim-site-bevel-light);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100dvh;
   background: var(--vim-site-shell);
 }
 .site-header {
@@ -29,7 +29,7 @@ button:disabled { cursor: not-allowed; }
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 18px;
+  padding: 7px 12px;
   border-bottom: 2px solid var(--vim-site-border);
   background: var(--vim-site-header);
 }
@@ -48,9 +48,9 @@ button:disabled { cursor: not-allowed; }
 }
 .mode-nav a[aria-current='page'] { border-color: var(--vim-site-bevel-dark) var(--vim-site-bevel-light) var(--vim-site-bevel-light) var(--vim-site-bevel-dark); background: var(--vim-site-button-active); color: var(--vim-site-foreground); text-decoration: none; }
 .mode-nav a:focus-visible { outline: 2px solid var(--vim-site-accent); outline-offset: 2px; }
-h1 { margin: 0; font-size: 32px; line-height: 1.1; }
-.site-header p { margin: 0; font-size: 15px; }
-.main-content { padding: 16px 18px 18px; }
+h1 { margin: 0; font-size: 25px; line-height: 1.1; }
+.site-header p { margin: 0; font-size: 13px; }
+.main-content { display: flex; flex: 1; flex-direction: column; min-height: 0; padding: 9px 12px 12px; }
 .instructions { margin: 0 0 16px; font-size: 16px; line-height: 1.4; }
 
 .workspace {
@@ -263,7 +263,13 @@ textarea::placeholder { color: var(--vim-site-muted); opacity: 1; }
 .notes-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .notes-title-row label { font-weight: bold; }
 .notes-title-row input { flex: 1; font-size: 17px; font-weight: bold; }
-.notes-editor-preview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.notes-editor-preview { display: grid; grid-template-columns: minmax(0, var(--notes-editor-width, 50%)) 12px minmax(0, 1fr); }
+.notes-divider { position: relative; width: 12px; background: var(--vim-site-shell); cursor: col-resize; touch-action: none; }
+.notes-divider::after { content: ''; position: absolute; top: 50%; left: 5px; width: 2px; height: 38px; transform: translateY(-50%); background: var(--vim-site-border); }
+.notes-divider:hover { background: var(--vim-site-button-hover); }
+.notes-divider:focus-visible { outline: 2px solid var(--vim-site-accent); outline-offset: -2px; }
+body.notes-resizing { cursor: col-resize; user-select: none; }
+body.notes-resizing .notes-pdf-preview { pointer-events: none; }
 .notes-pane { min-width: 0; border: 1px solid var(--vim-site-border); background: var(--vim-site-field); }
 .notes-pane .panel-heading { min-height: 44px; align-items: center; padding: 5px 9px; }
 .notes-pane h3 { margin: 0; font-size: 16px; }
@@ -304,6 +310,26 @@ textarea::placeholder { color: var(--vim-site-muted); opacity: 1; }
 .notes-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
 #notes-print { display: none; }
 
+@media (min-width: 961px) {
+  .site-shell { height: 100dvh; overflow: hidden; }
+  #equation-view, #notes-view { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+  .workspace, .notes-workspace { flex: 1; min-height: 0; }
+  .editor-panel, .preview-panel { display: flex; flex-direction: column; min-height: 0; }
+  #latex-input, #vim-editor-shell { flex: 1; min-height: 0; height: auto; resize: none; }
+  #vim-editor-shell .cm-editor { height: 100%; }
+  .preview-scroll { flex: 1; min-height: 0; height: auto; }
+  .status-bar, .editor-bottom, .export-area { flex: none; }
+  .notes-sidebar, .notes-main, #notes-document, .notes-pane { display: flex; flex-direction: column; min-height: 0; }
+  .notes-list { flex: 1; min-height: 0; max-height: none; }
+  .notes-main { padding: 8px; }
+  .notes-empty, #notes-document, .notes-editor-preview { flex: 1; min-height: 0; }
+  .notes-editor-preview { gap: 0; }
+  #notes-body, #notes-vim-shell { flex: 1; min-height: 0; height: auto; resize: none; }
+  #notes-vim-shell .cm-editor { height: 100%; }
+  .notes-preview, .notes-pdf-preview, .notes-compile-error { flex: 1; min-height: 0; height: auto; overflow: auto; }
+  .notes-footer { flex: none; }
+}
+
 @media (max-width: 960px) {
   .workspace { grid-template-columns: 1fr; }
   textarea { min-height: 230px; }
@@ -312,6 +338,7 @@ textarea::placeholder { color: var(--vim-site-muted); opacity: 1; }
   .preview-scroll { height: 260px; }
   .notes-workspace { grid-template-columns: 180px minmax(0, 1fr); }
   .notes-editor-preview { grid-template-columns: 1fr; }
+  .notes-divider { display: none; }
   .notes-preview { min-height: 300px; }
   .notes-pdf-preview { height: 440px; }
 }

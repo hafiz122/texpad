@@ -6,6 +6,8 @@ Texpad has two workspaces: a one-equation LaTeX editor and a study-notes editor.
 
 **Notes** at `#notes` supports multiple named drafts. New notes start from a full LaTeX preamble template: Study notes, Problem set, or Article. The browser compiles these documents with pdfLaTeX and shows the real PDF in the preview. Export the `.tex` source or the compiled PDF, or import a `.tex` file. The bundled TeX Live core includes common packages such as `amsmath` and `amssymb`; a package outside that bundle produces a compilation error.
 
+On desktop, Texpad fills the browser window. Drag the divider between the source and preview to resize them, or focus it and use the arrow, Home, and End keys. The split is remembered in this browser. On phones, use the Edit and Preview tabs.
+
 Choose **Blank Markdown** for the earlier Markdown editor. It supports `$...$` inline math and `$$...$$` display math, `.md` import/export, and **Print / Save PDF** through the browser print dialog. The Markdown preview and print layout use Latin Modern Roman, a Computer Modern variant; MathJax uses New Computer Modern for math. All notes autosave in this browser's IndexedDB. Notes do not sync between devices, and clearing site data can erase local drafts, so download source files for backups.
 
 Both workspaces offer optional Vim editing with an animated cursor trail. Press `i` to insert text and `Esc` to return to normal mode. The trail is disabled when the device requests reduced motion.

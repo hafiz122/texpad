@@ -27,6 +27,8 @@ const vimTrail = element('notes-vim-trail');
 const templateSelect = element('notes-template');
 const downloadButton = element('notes-download');
 const printButton = element('notes-print-button');
+const splitGrid = document.querySelector('.notes-editor-preview');
+const divider = element('notes-divider');
 
 let database;
 let storageError = false;
@@ -46,6 +48,21 @@ let getTheme;
 let pendingDeleteId = null;
 let pdfUrl = null;
 let pdfBytes = null;
+let editorWidth = 50;
+
+function setEditorWidth(percent, persist = false) {
+  const width = splitGrid.clientWidth;
+  const minimum = width ? Math.min(50, Math.max(25, Math.ceil(26000 / width))) : 25;
+  const maximum = width ? Math.max(50, Math.min(75, Math.floor(100 - 29200 / width))) : 75;
+  editorWidth = Math.max(minimum, Math.min(maximum, Math.round(percent)));
+  splitGrid.style.setProperty('--notes-editor-width', `${editorWidth}%`);
+  divider.setAttribute('aria-valuemin', String(minimum));
+  divider.setAttribute('aria-valuemax', String(maximum));
+  divider.setAttribute('aria-valuenow', String(editorWidth));
+  if (persist) {
+    try { window.localStorage.setItem('texpad.editorWidth', String(editorWidth)); } catch { /* Storage may be disabled. */ }
+  }
+}
 
 function activeNote() { return notes.get(activeId); }
 function formatOf(note) { return note?.format === 'latex' ? 'latex' : 'markdown'; }
@@ -640,6 +657,41 @@ function switchNoteTab(event) {
 
 export async function initNotes(options) {
   getTheme = options.getTheme;
+  let savedWidth = 50;
+  try { savedWidth = Number(window.localStorage.getItem('texpad.editorWidth')) || 50; } catch { /* Storage may be disabled. */ }
+  setEditorWidth(savedWidth);
+  new ResizeObserver(() => setEditorWidth(editorWidth)).observe(splitGrid);
+  let activePointer = null;
+  const splitAtPointer = (event) => {
+    const bounds = splitGrid.getBoundingClientRect();
+    if (bounds.width) setEditorWidth(100 * (event.clientX - bounds.left) / bounds.width);
+  };
+  divider.addEventListener('pointerdown', (event) => {
+    if (activePointer !== null) return;
+    activePointer = event.pointerId;
+    divider.setPointerCapture(event.pointerId);
+    document.body.classList.add('notes-resizing');
+    splitAtPointer(event);
+    event.preventDefault();
+  });
+  window.addEventListener('pointermove', (event) => {
+    if (event.pointerId === activePointer) splitAtPointer(event);
+  });
+  const endSplit = (event) => {
+    if (event.pointerId !== activePointer) return;
+    activePointer = null;
+    document.body.classList.remove('notes-resizing');
+    setEditorWidth(editorWidth, true);
+  };
+  window.addEventListener('pointerup', endSplit);
+  window.addEventListener('pointercancel', endSplit);
+  divider.addEventListener('lostpointercapture', endSplit);
+  divider.addEventListener('keydown', (event) => {
+    const next = { ArrowLeft: editorWidth - 5, ArrowRight: editorWidth + 5, Home: 25, End: 75 }[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    setEditorWidth(next, true);
+  });
   search.addEventListener('input', renderNoteList);
   list.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-note-id]');
