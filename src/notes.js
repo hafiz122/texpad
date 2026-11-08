@@ -561,6 +561,7 @@ function showActive() {
     downloadButton.textContent = latex ? 'Download .tex' : 'Download .md';
     printButton.textContent = latex ? 'Download PDF' : 'Print / Save PDF';
     printButton.disabled = latex;
+    element('notes-curve-button').hidden = !latex;
     preview.hidden = latex;
     bodyInput.setSelectionRange(0, 0);
     setSaveState(database && !storageError ? 'Saved' : 'Not saved — download the source file to keep this note.', database && !storageError ? 'ready' : 'error');
@@ -588,6 +589,37 @@ async function createNote(title, body, format) {
 function newNote() {
   const template = templateFor(templateSelect.value);
   return createNote(template.title, template.body, template.format);
+}
+
+async function insertBellCurve(latex) {
+  let note = activeNote();
+  let created = false;
+  if (!note) {
+    await createNote('Bell curve', String.raw`\documentclass[11pt,a4paper]{article}
+\begin{document}
+
+\end{document}
+`, 'latex');
+    note = activeNote();
+    created = true;
+  }
+  if (formatOf(note) !== 'latex') return { ok: false, message: 'Select a LaTeX note before inserting the curve.' };
+  const end = note.body.lastIndexOf('\\end{document}');
+  if (end < 0 || note.body.indexOf('\\begin{document}') < 0) {
+    return { ok: false, message: 'This note needs a LaTeX document body before inserting the curve.' };
+  }
+  const before = note.body.slice(0, end);
+  const prefix = before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+  const insert = `${prefix}${latex}\n\n`;
+  if (vimView) {
+    vimView.dispatch({ changes: { from: end, insert }, selection: { anchor: end + insert.length } });
+  } else {
+    bodyInput.setRangeText(insert, end, end, 'end');
+    note.body = bodyInput.value;
+    markEdited();
+    schedulePreview();
+  }
+  return { ok: true, created };
 }
 
 function requestDelete() {
@@ -723,6 +755,7 @@ export async function initNotes(options) {
     if (vimView) { stopVim(); bodyInput.focus(); }
     else await startVim();
   });
+  element('notes-curve-button').addEventListener('click', () => { window.location.hash = '#curve'; });
   element('notes-import').addEventListener('click', () => fileInput.click());
   element('notes-import-empty').addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', () => importNote(fileInput.files[0]));
@@ -758,6 +791,11 @@ export async function initNotes(options) {
   activeId = notes.has(lastNote) ? lastNote : sortedNotes()[0]?.id || null;
   showActive();
   return {
+    insertBellCurve,
+    focusEditor() {
+      element('notes-edit-tab').click();
+      (vimView || bodyInput).focus();
+    },
     onTheme(theme) {
       if (vimView) {
         vimView.dispatch({ effects: vimCompartment.reconfigure(vimHighlighting(theme)) });

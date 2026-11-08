@@ -4,7 +4,7 @@ Texpad has three workspaces: a one-equation LaTeX editor, a bell-curve drawer, a
 
 **Equation** downloads one equation as a white-background PDF, PNG, or JPG. Oversized equations shrink to fit the preview; downloads keep the original equation size.
 
-**Bell curve** draws a normal distribution from a mean and standard deviation. The horizontal axis spans four standard deviations on each side of the mean. Download the graph as a white-background PDF, PNG, or JPG.
+**Bell curve** draws a normal distribution from a mean and standard deviation. The horizontal axis spans four standard deviations on each side of the mean. Use **Insert into LaTeX note** to add a vector graph before `\end{document}` in the current note; the generated source uses standard LaTeX `picture` commands and needs no plotting package. You can also download the standalone graph as a white-background PDF, PNG, or JPG.
 
 **Notes** at `#notes` supports multiple named drafts. New notes start from a full LaTeX preamble template: Study notes, Problem set, or Article. The browser compiles these documents with pdfLaTeX and shows the real PDF in a built-in viewer with page navigation and zoom controls. Export the `.tex` source or the compiled PDF, or import a `.tex` file. The bundled TeX Live core includes common packages such as `amsmath` and `amssymb`; a package outside that bundle produces a compilation error.
 

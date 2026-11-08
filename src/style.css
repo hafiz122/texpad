@@ -235,6 +235,7 @@ textarea::placeholder { color: var(--vim-site-muted); opacity: 1; }
 .curve-controls input { width: 100%; min-height: 42px; padding: 7px 9px; border: 2px solid var(--vim-site-border); border-radius: 0; background: var(--vim-site-field); color: var(--vim-site-foreground); font: 16px Arial, Helvetica, sans-serif; }
 .curve-controls input:focus-visible { outline: 2px solid var(--vim-site-accent); outline-offset: 2px; }
 .curve-controls p { max-width: 42ch; margin: 0; color: var(--vim-site-muted); font-size: 14px; line-height: 1.4; }
+.curve-controls .classic-button { width: fit-content; min-height: 44px; }
 .curve-preview { width: 100%; padding: 16px; text-align: center; }
 .curve-preview svg { display: block; width: 100%; max-width: 720px; height: auto; margin: auto; }
 .curve-preview-scroll { min-height: 300px; }
@@ -283,6 +284,7 @@ body.notes-resizing .notes-pdf-scroll { pointer-events: none; }
 .notes-pane .panel-heading { min-height: 44px; align-items: center; padding: 5px 9px; }
 .notes-pane h3 { margin: 0; font-size: 16px; }
 .notes-pane .mode-toggle { min-height: 34px; }
+.notes-editor-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 #notes-body, #notes-vim-shell { width: calc(100% - 16px); margin: 8px; min-height: 410px; }
 #notes-body { padding: 10px; }
 #notes-vim-shell .cm-editor { height: 410px; }

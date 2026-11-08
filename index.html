@@ -105,6 +105,7 @@
                   <input id="curve-sigma" type="number" value="1" min="0.000001" step="any" inputmode="decimal" />
                 </label>
                 <p id="curve-help">The curve spans four standard deviations on either side of the mean.</p>
+                <button id="curve-insert" class="classic-button" type="button">Insert into LaTeX note</button>
               </div>
             </section>
             <section class="preview-panel" aria-labelledby="curve-preview-title">
@@ -183,7 +184,10 @@
                   <section id="notes-edit-panel" class="notes-pane" role="tabpanel" aria-labelledby="notes-edit-tab">
                     <div class="panel-heading">
                       <h3 id="notes-edit-heading">Write</h3>
-                      <button id="notes-vim-toggle" class="mode-toggle" type="button" aria-pressed="false" aria-controls="notes-vim-shell">Vim mode: off</button>
+                      <div class="notes-editor-tools">
+                        <button id="notes-curve-button" class="classic-button" type="button">Add bell curve…</button>
+                        <button id="notes-vim-toggle" class="mode-toggle" type="button" aria-pressed="false" aria-controls="notes-vim-shell">Vim mode: off</button>
+                      </div>
                     </div>
                     <textarea id="notes-body" spellcheck="true" aria-label="Note text" placeholder="Write LaTeX here."></textarea>
                     <div id="notes-vim-shell" class="vim-editor-shell" hidden>

@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import * as themeTools from './site-theme.js';
-import { makeBellCurve } from './bell-curve.js';
+import { makeBellCurve, makeBellCurveLatex } from './bell-curve.js';
 import './style.css';
 
 const input = document.querySelector('#latex-input');
@@ -29,6 +29,7 @@ const curveSigma = document.querySelector('#curve-sigma');
 const curvePreview = document.querySelector('#curve-preview');
 const curvePreviewState = document.querySelector('#curve-preview-state');
 const curveStatus = document.querySelector('#curve-status');
+const curveInsertButton = document.querySelector('#curve-insert');
 let notesApp;
 let notesLoading;
 
@@ -100,12 +101,14 @@ function updateCurve() {
     curveStatus.textContent = 'Bell curve ready to download.';
     curveStatus.dataset.kind = 'ready';
     for (const button of curveExportButtons) button.disabled = false;
+    curveInsertButton.disabled = false;
   } catch (error) {
     curvePreview.replaceChildren();
     curvePreviewState.textContent = 'Check input';
     curveStatus.textContent = error.message;
     curveStatus.dataset.kind = 'error';
     for (const button of curveExportButtons) button.disabled = true;
+    curveInsertButton.disabled = true;
   }
 }
 
@@ -539,7 +542,36 @@ for (const button of exportButtons) {
 }
 curveMean.addEventListener('input', updateCurve);
 curveSigma.addEventListener('input', updateCurve);
+curveInsertButton.addEventListener('click', async () => {
+  curveInsertButton.disabled = true;
+  try {
+    const latex = makeBellCurveLatex(Number(curveMean.value), Number(curveSigma.value));
+    const app = await loadNotes();
+    const result = await app.insertBellCurve(latex);
+    if (!result.ok) throw new Error(result.message);
+    window.location.hash = '#notes';
+    await showWorkspace();
+    requestAnimationFrame(() => app.focusEditor());
+  } catch (error) {
+    curveStatus.textContent = error.message || 'Could not insert the bell curve.';
+    curveStatus.dataset.kind = 'error';
+  } finally {
+    curveInsertButton.disabled = !curvePreview.querySelector('svg');
+  }
+});
 updateCurve();
+
+async function loadNotes() {
+  if (notesApp) return notesApp;
+  notesLoading ??= import('./notes.js').then(({ initNotes }) => initNotes({ getTheme: () => themeTools.getTheme(selectedTheme) }));
+  try {
+    notesApp = await notesLoading;
+    return notesApp;
+  } catch (error) {
+    notesLoading = null;
+    throw error;
+  }
+}
 
 async function showWorkspace() {
   const notesMode = window.location.hash === '#notes';
@@ -553,8 +585,7 @@ async function showWorkspace() {
   document.title = notesMode ? 'Texpad · Study notes' : curveMode ? 'Texpad · Bell curve' : 'Texpad · Math to PDF, PNG, JPG';
   if (notesMode && !notesApp) {
     try {
-      notesLoading ??= import('./notes.js').then(({ initNotes }) => initNotes({ getTheme: () => themeTools.getTheme(selectedTheme) }));
-      notesApp = await notesLoading;
+      await loadNotes();
     } catch {
       notesLoading = null;
       document.querySelector('#notes-empty').textContent = 'Notes could not load. Reload the page and try again.';
