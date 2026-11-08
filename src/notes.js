@@ -2,6 +2,7 @@ import { Marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { openDB } from 'idb';
 import { noteTemplates, templateFor } from './latex-templates.js';
+import { makeBellCurveLatex } from './bell-curve.js';
 
 const element = (id) => document.getElementById(id);
 const list = element('notes-list');
@@ -612,7 +613,7 @@ async function switchTemplate() {
   else bodyInput.focus();
 }
 
-async function insertBellCurve(latex) {
+async function insertBellCurve(latex, { atCursor = false } = {}) {
   let note = activeNote();
   let created = false;
   if (!note) {
@@ -625,17 +626,22 @@ async function insertBellCurve(latex) {
     created = true;
   }
   if (formatOf(note) !== 'latex') return { ok: false, message: 'Select a LaTeX note before inserting the curve.' };
+  const start = note.body.indexOf('\\begin{document}');
   const end = note.body.lastIndexOf('\\end{document}');
-  if (end < 0 || note.body.indexOf('\\begin{document}') < 0) {
+  if (end < 0 || start < 0 || end <= start) {
     return { ok: false, message: 'This note needs a LaTeX document body before inserting the curve.' };
   }
-  const before = note.body.slice(0, end);
+  const cursor = vimView ? vimView.state.selection.main.head : bodyInput.selectionStart;
+  const position = atCursor && cursor >= start + '\\begin{document}'.length && cursor <= end ? cursor : end;
+  const before = note.body.slice(0, position);
+  const after = note.body.slice(position);
   const prefix = before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
-  const insert = `${prefix}${latex}\n\n`;
+  const suffix = after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : '\n\n';
+  const insert = `${prefix}${latex}${suffix}`;
   if (vimView) {
-    vimView.dispatch({ changes: { from: end, insert }, selection: { anchor: end + insert.length } });
+    vimView.dispatch({ changes: { from: position, insert }, selection: { anchor: position + insert.length } });
   } else {
-    bodyInput.setRangeText(insert, end, end, 'end');
+    bodyInput.setRangeText(insert, position, position, 'end');
     note.body = bodyInput.value;
     markEdited();
     schedulePreview();
@@ -777,7 +783,15 @@ export async function initNotes(options) {
     if (vimView) { stopVim(); bodyInput.focus(); }
     else await startVim();
   });
-  element('notes-curve-button').addEventListener('click', () => { window.location.hash = '#curve'; });
+  element('notes-curve-button').addEventListener('click', async () => {
+    try {
+      const result = await insertBellCurve(makeBellCurveLatex(0, 1), { atCursor: true });
+      if (!result.ok) { setSaveState(result.message, 'error'); return; }
+      (vimView || bodyInput).focus();
+    } catch (error) {
+      setSaveState(error.message || 'Could not insert the bell curve.', 'error');
+    }
+  });
   element('notes-import').addEventListener('click', () => fileInput.click());
   element('notes-import-empty').addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', () => importNote(fileInput.files[0]));
