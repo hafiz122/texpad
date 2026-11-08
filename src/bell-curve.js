@@ -72,7 +72,7 @@ export function makeBellCurve(mean, sigma, lower, upper) {
   const shadePath = shadePoints.length
     ? `M ${x(from)} ${baseline} L ${shadePoints.map((z) => `${x(z).toFixed(2)} ${y(z).toFixed(2)}`).join(' L ')} L ${x(to)} ${baseline} Z`
     : '';
-  const edge = (z) => z >= -4 && z <= 4 && lowerZ < upperZ
+  const edge = (z) => z >= -4 && z <= 4 && x(upperZ) - x(lowerZ) >= 3
     ? `<path d="M ${x(z).toFixed(2)} ${baseline} V ${y(z).toFixed(2)}" fill="none" stroke="#315f8d" stroke-width="1.5" stroke-dasharray="4 4"/>`
     : '';
 

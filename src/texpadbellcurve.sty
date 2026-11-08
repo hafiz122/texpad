@@ -17,6 +17,9 @@
 \fp_new:N \l__texpadbellcurve_tail_fp
 \fp_new:N \l__texpadbellcurve_lower_cdf_fp
 \fp_new:N \l__texpadbellcurve_upper_cdf_fp
+\fp_new:N \l__texpadbellcurve_segment_left_fp
+\fp_new:N \l__texpadbellcurve_segment_right_fp
+\fp_new:N \l__texpadbellcurve_segment_mid_fp
 \int_new:N \l__texpadbellcurve_area_int
 
 \cs_new_protected:Npn \texpadbellcurve_cdf:nN #1#2
@@ -63,23 +66,32 @@
     \fp_compare:nT { \l__texpadbellcurve_lower_z_fp < \l__texpadbellcurve_upper_z_fp }
       {
         \color[rgb]{0.67,0.79,0.89}
-        \linethickness{2.1pt}
-        \int_step_inline:nnnn {0}{1}{148}
+        \int_step_inline:nnnn {0}{1}{147}
           {
             \fp_set:Nn \l__texpadbellcurve_z_fp { -4 + ##1 * 2 / 37 }
-            \fp_compare:nT { \l__texpadbellcurve_z_fp >= \l__texpadbellcurve_lower_z_fp }
+            \fp_set:Nn \l__texpadbellcurve_segment_left_fp
+              { max(\l__texpadbellcurve_z_fp, \l__texpadbellcurve_lower_z_fp) }
+            \fp_set:Nn \l__texpadbellcurve_segment_right_fp
+              { min(\l__texpadbellcurve_z_fp + 2 / 37, \l__texpadbellcurve_upper_z_fp) }
+            \fp_compare:nT
+              { \l__texpadbellcurve_segment_right_fp > \l__texpadbellcurve_segment_left_fp }
               {
-                \fp_compare:nT { \l__texpadbellcurve_z_fp <= \l__texpadbellcurve_upper_z_fp }
-                  {
-                    \put(\fp_eval:n { 12 + 2 * ##1 },43)
-                      {\line(0,1){\fp_eval:n { 93 * exp(-\l__texpadbellcurve_z_fp^2 / 2) }}}
-                  }
+                \fp_set:Nn \l__texpadbellcurve_segment_mid_fp
+                  { (\l__texpadbellcurve_segment_left_fp + \l__texpadbellcurve_segment_right_fp) / 2 }
+                \linethickness{\fp_eval:n
+                  { 37 * (\l__texpadbellcurve_segment_right_fp - \l__texpadbellcurve_segment_left_fp) }pt}
+                \put(\fp_eval:n { 12 + 37 * (\l__texpadbellcurve_segment_mid_fp + 4) },43)
+                  {\line(0,1){\fp_eval:n { 93 * exp(-\l__texpadbellcurve_segment_mid_fp^2 / 2) }}}
               }
           }
         \color[rgb]{0.20,0.37,0.55}
         \linethickness{0.7pt}
-        \texpadbellcurve_edge:N \l__texpadbellcurve_lower_z_fp
-        \texpadbellcurve_edge:N \l__texpadbellcurve_upper_z_fp
+        \fp_compare:nT
+          { \l__texpadbellcurve_upper_z_fp - \l__texpadbellcurve_lower_z_fp >= 2 / 37 }
+          {
+            \texpadbellcurve_edge:N \l__texpadbellcurve_lower_z_fp
+            \texpadbellcurve_edge:N \l__texpadbellcurve_upper_z_fp
+          }
         \color{black}
       }
   }

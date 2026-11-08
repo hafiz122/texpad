@@ -132,7 +132,7 @@ function markEdited() {
   setSaveState(database ? 'Saving…' : 'Not saved — download the source file to keep this note.', database ? 'loading' : 'error');
   renderNoteList();
   clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(() => saveCurrent(), 500);
+  saveTimer = window.setTimeout(() => saveRecord(note), 500);
 }
 
 function saveRecord(note) {
@@ -534,7 +534,7 @@ function stopVim() {
 
 async function selectNote(id) {
   if (!notes.has(id) || id === activeId) return;
-  await saveCurrent();
+  saveCurrent();
   const wasVim = Boolean(vimView);
   if (wasVim) stopVim();
   activeId = id;
@@ -576,7 +576,7 @@ function showActive() {
 }
 
 async function createNote(title, body, format) {
-  await saveCurrent();
+  saveCurrent();
   const wasVim = Boolean(vimView);
   if (wasVim) stopVim();
   const now = Date.now();
@@ -603,7 +603,7 @@ async function switchTemplate() {
     note.title === candidate.title && note.body === candidate.body && note.format === candidate.format);
   if (!untouched) return createNote(template.title, template.body, template.format);
 
-  await saveCurrent();
+  saveCurrent();
   const wasVim = Boolean(vimView);
   if (wasVim) stopVim();
   note.title = template.title;

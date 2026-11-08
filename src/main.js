@@ -352,7 +352,10 @@ themeSelect.addEventListener('change', () => {
 
 async function toggleVimMode() {
   if (vimView) {
+    const selection = vimView.state.selection.main;
     input.value = vimView.state.doc.toString();
+    input.setSelectionRange(selection.from, selection.to,
+      selection.anchor > selection.head ? 'backward' : 'forward');
     cursorResizeObserver?.disconnect();
     cursorResizeObserver = null;
     hideSmoothCursor();
@@ -377,11 +380,17 @@ async function toggleVimMode() {
     const theme = themeTools.getTheme(selectedTheme);
     setCursorColor(theme.colors.cursor);
     themeCompartment = new vimThemeTools.Compartment();
+    const backward = input.selectionDirection === 'backward';
+    const selection = {
+      anchor: backward ? input.selectionEnd : input.selectionStart,
+      head: backward ? input.selectionStart : input.selectionEnd,
+    };
     vimShell.hidden = false;
     input.hidden = true;
     vimHelp.hidden = false;
     vimView = new EditorView({
       doc: input.value,
+      selection,
       extensions: [
         vim({ status: true }),
         basicSetup,
