@@ -26,6 +26,8 @@ const curveLink = document.querySelector('#curve-link');
 const notesLink = document.querySelector('#notes-link');
 const curveMean = document.querySelector('#curve-mean');
 const curveSigma = document.querySelector('#curve-sigma');
+const curveLower = document.querySelector('#curve-lower');
+const curveUpper = document.querySelector('#curve-upper');
 const curvePreview = document.querySelector('#curve-preview');
 const curvePreviewState = document.querySelector('#curve-preview-state');
 const curveStatus = document.querySelector('#curve-status');
@@ -92,10 +94,26 @@ function setDownloadsEnabled(enabled) {
   for (const button of equationExportButtons) button.disabled = !enabled;
 }
 
+function curveValues() {
+  if ([curveMean, curveSigma, curveLower, curveUpper].some((field) => field.validity.badInput)) {
+    throw new Error('Enter numeric values for the bell curve.');
+  }
+  if (!curveMean.value || !curveSigma.value) throw new Error('Enter a mean and a standard deviation.');
+  const lowerText = curveLower.value.trim();
+  const upperText = curveUpper.value.trim();
+  if (Boolean(lowerText) !== Boolean(upperText)) throw new Error('Enter both the lower and upper bounds, or leave both empty.');
+  return {
+    mean: Number(curveMean.value),
+    sigma: Number(curveSigma.value),
+    lower: lowerText ? Number(lowerText) : undefined,
+    upper: upperText ? Number(upperText) : undefined,
+  };
+}
+
 function updateCurve() {
   try {
-    if (!curveMean.value || !curveSigma.value) throw new Error('Enter a mean and a standard deviation.');
-    const svg = makeBellCurve(Number(curveMean.value), Number(curveSigma.value));
+    const { mean, sigma, lower, upper } = curveValues();
+    const svg = makeBellCurve(mean, sigma, lower, upper);
     curvePreview.replaceChildren(svg);
     curvePreviewState.textContent = 'Ready';
     curveStatus.textContent = 'Bell curve ready to download.';
@@ -542,10 +560,13 @@ for (const button of exportButtons) {
 }
 curveMean.addEventListener('input', updateCurve);
 curveSigma.addEventListener('input', updateCurve);
+curveLower.addEventListener('input', updateCurve);
+curveUpper.addEventListener('input', updateCurve);
 curveInsertButton.addEventListener('click', async () => {
   curveInsertButton.disabled = true;
   try {
-    const latex = makeBellCurveLatex(Number(curveMean.value), Number(curveSigma.value));
+    const { mean, sigma, lower, upper } = curveValues();
+    const latex = makeBellCurveLatex(mean, sigma, lower, upper);
     const app = await loadNotes();
     const result = await app.insertBellCurve(latex);
     if (!result.ok) throw new Error(result.message);

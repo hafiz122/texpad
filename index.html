@@ -90,7 +90,7 @@
         </section>
 
         <section id="curve-view" aria-labelledby="curve-title" hidden>
-          <p class="instructions">Draw a normal distribution. Change the mean and standard deviation to label the horizontal axis.</p>
+          <p class="instructions">Draw a normal distribution. Add lower and upper bounds to shade a probability range.</p>
           <div class="workspace curve-workspace">
             <section class="editor-panel" aria-labelledby="curve-title">
               <div class="panel-heading">
@@ -104,6 +104,13 @@
                 <label for="curve-sigma">Standard deviation (σ)
                   <input id="curve-sigma" type="number" value="1" min="0.000001" step="any" inputmode="decimal" />
                 </label>
+                <label for="curve-lower">Lower bound (optional)
+                  <input id="curve-lower" type="number" step="any" inputmode="decimal" />
+                </label>
+                <label for="curve-upper">Upper bound (optional)
+                  <input id="curve-upper" type="number" step="any" inputmode="decimal" />
+                </label>
+                <p>Leave both bounds empty for an unshaded curve.</p>
                 <p id="curve-help">The curve spans four standard deviations on either side of the mean.</p>
                 <button id="curve-insert" class="classic-button" type="button">Insert into LaTeX note</button>
               </div>

@@ -1,18 +1,127 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{texpadbellcurve}[2026/11/08 Bell curve for Texpad]
 \RequirePackage{expl3}
+\RequirePackage{color}
 
 \ExplSyntaxOn
 \cs_new:Npn \texpadbellcurve_number:n #1
   { \fp_eval:n { round((#1), 8) } }
 
-\NewDocumentCommand{\bellcurve}{mm}
+\seq_new:N \l__texpadbellcurve_bounds_seq
+\fp_new:N \l__texpadbellcurve_lower_fp
+\fp_new:N \l__texpadbellcurve_upper_fp
+\fp_new:N \l__texpadbellcurve_lower_z_fp
+\fp_new:N \l__texpadbellcurve_upper_z_fp
+\fp_new:N \l__texpadbellcurve_z_fp
+\fp_new:N \l__texpadbellcurve_t_fp
+\fp_new:N \l__texpadbellcurve_tail_fp
+\fp_new:N \l__texpadbellcurve_lower_cdf_fp
+\fp_new:N \l__texpadbellcurve_upper_cdf_fp
+\int_new:N \l__texpadbellcurve_area_int
+
+\cs_new_protected:Npn \texpadbellcurve_cdf:nN #1#2
+  {
+    \fp_set:Nn \l__texpadbellcurve_z_fp {#1}
+    \fp_compare:nTF { \l__texpadbellcurve_z_fp >= 8 }
+      { \fp_set:Nn #2 {1} }
+      {
+        \fp_compare:nTF { \l__texpadbellcurve_z_fp <= -8 }
+          { \fp_set:Nn #2 {0} }
+          {
+            \fp_set:Nn \l__texpadbellcurve_t_fp
+              { 1 / (1 + 0.2316419 * abs(\l__texpadbellcurve_z_fp)) }
+            \fp_set:Nn \l__texpadbellcurve_tail_fp
+              {
+                exp(-\l__texpadbellcurve_z_fp^2 / 2) / 2.506628274631
+                * (0.319381530 * \l__texpadbellcurve_t_fp
+                - 0.356563782 * \l__texpadbellcurve_t_fp^2
+                + 1.781477937 * \l__texpadbellcurve_t_fp^3
+                - 1.821255978 * \l__texpadbellcurve_t_fp^4
+                + 1.330274429 * \l__texpadbellcurve_t_fp^5)
+              }
+            \fp_compare:nTF { \l__texpadbellcurve_z_fp >= 0 }
+              { \fp_set:Nn #2 { 1 - \l__texpadbellcurve_tail_fp } }
+              { \fp_set_eq:NN #2 \l__texpadbellcurve_tail_fp }
+          }
+      }
+  }
+
+\cs_new_protected:Npn \texpadbellcurve_edge:N #1
+  {
+    \fp_compare:nT { #1 >= -4 }
+      {
+        \fp_compare:nT { #1 <= 4 }
+          {
+            \put(\fp_eval:n { 12 + (#1 + 4) * 37 },43)
+              {\line(0,1){\fp_eval:n { 93 * exp(-#1^2 / 2) }}}
+          }
+      }
+  }
+
+\cs_new_protected:Npn \texpadbellcurve_shade:
+  {
+    \fp_compare:nT { \l__texpadbellcurve_lower_z_fp < \l__texpadbellcurve_upper_z_fp }
+      {
+        \color[rgb]{0.67,0.79,0.89}
+        \linethickness{2.1pt}
+        \int_step_inline:nnnn {0}{1}{148}
+          {
+            \fp_set:Nn \l__texpadbellcurve_z_fp { -4 + ##1 * 2 / 37 }
+            \fp_compare:nT { \l__texpadbellcurve_z_fp >= \l__texpadbellcurve_lower_z_fp }
+              {
+                \fp_compare:nT { \l__texpadbellcurve_z_fp <= \l__texpadbellcurve_upper_z_fp }
+                  {
+                    \put(\fp_eval:n { 12 + 2 * ##1 },43)
+                      {\line(0,1){\fp_eval:n { 93 * exp(-\l__texpadbellcurve_z_fp^2 / 2) }}}
+                  }
+              }
+          }
+        \color[rgb]{0.20,0.37,0.55}
+        \linethickness{0.7pt}
+        \texpadbellcurve_edge:N \l__texpadbellcurve_lower_z_fp
+        \texpadbellcurve_edge:N \l__texpadbellcurve_upper_z_fp
+        \color{black}
+      }
+  }
+
+\NewDocumentCommand{\bellcurve}{mmo}
   {
     \begin{center}
     \begingroup
+    \fp_compare:nF { #2 > 0 }
+      { \PackageError{texpadbellcurve}{Standard~deviation~must~be~positive}{} }
+    \IfNoValueF{#3}
+      {
+        \seq_set_split:Nnn \l__texpadbellcurve_bounds_seq {,} {#3}
+        \int_compare:nNnF {\seq_count:N \l__texpadbellcurve_bounds_seq} = {2}
+          { \PackageError{texpadbellcurve}{Use~two~bounds:~[lower,upper]}{} }
+        \fp_set:Nn \l__texpadbellcurve_lower_fp
+          { \seq_item:Nn \l__texpadbellcurve_bounds_seq {1} }
+        \fp_set:Nn \l__texpadbellcurve_upper_fp
+          { \seq_item:Nn \l__texpadbellcurve_bounds_seq {2} }
+        \fp_compare:nF { \l__texpadbellcurve_lower_fp <= \l__texpadbellcurve_upper_fp }
+          { \PackageError{texpadbellcurve}{Lower~bound~exceeds~upper~bound}{} }
+        \fp_set:Nn \l__texpadbellcurve_lower_z_fp
+          { (\l__texpadbellcurve_lower_fp - (#1)) / (#2) }
+        \fp_set:Nn \l__texpadbellcurve_upper_z_fp
+          { (\l__texpadbellcurve_upper_fp - (#1)) / (#2) }
+        \texpadbellcurve_cdf:nN {\l__texpadbellcurve_lower_z_fp} \l__texpadbellcurve_lower_cdf_fp
+        \texpadbellcurve_cdf:nN {\l__texpadbellcurve_upper_z_fp} \l__texpadbellcurve_upper_cdf_fp
+        \int_set:Nn \l__texpadbellcurve_area_int
+          { \fp_eval:n { round(1000 * (\l__texpadbellcurve_upper_cdf_fp - \l__texpadbellcurve_lower_cdf_fp), 0) } }
+        \int_set:Nn \l__texpadbellcurve_area_int
+          { \int_max:nn {0} { \int_min:nn {1000} {\l__texpadbellcurve_area_int} } }
+      }
     \setlength{\unitlength}{1pt}
-    \begin{picture}(320,166)
-      \put(160,154){\makebox(0,0){\small Normal~distribution~($\mu=\texpadbellcurve_number:n{#1}$, $\sigma=\texpadbellcurve_number:n{#2}$)}}
+    \begin{picture}(320,185)
+      \put(160,172){\makebox(0,0){\small Normal~distribution~($\mu=\texpadbellcurve_number:n{#1}$, $\sigma=\texpadbellcurve_number:n{#2}$)}}
+      \IfNoValueF{#3}
+        {
+          \put(160,153){\makebox(0,0){\scriptsize Area~$\approx$~
+            \int_eval:n { \int_div_truncate:nn {\l__texpadbellcurve_area_int}{10} }.
+            \int_eval:n { \int_mod:nn {\l__texpadbellcurve_area_int}{10} }\%}}
+          \texpadbellcurve_shade:
+        }
       \linethickness{0.45pt}
       \put(12,43){\line(1,0){296}}
       \put(49,39){\line(0,1){8}}
