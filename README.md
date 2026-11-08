@@ -4,11 +4,11 @@ Texpad has three workspaces: a one-equation LaTeX editor, a bell-curve drawer, a
 
 **Equation** downloads one equation as a white-background PDF, PNG, or JPG. Oversized equations shrink to fit the preview; downloads keep the original equation size.
 
-**Bell curve** draws a normal distribution from a mean and standard deviation. The horizontal axis spans four standard deviations on each side of the mean. Use **Insert into LaTeX note** to add a vector graph before `\end{document}` in the current note; the generated source uses standard LaTeX `picture` commands and needs no plotting package. You can also download the standalone graph as a white-background PDF, PNG, or JPG.
+**Bell curve** draws a normal distribution from a mean and standard deviation. The horizontal axis spans four standard deviations on each side of the mean. Use **Insert into LaTeX note** to add `\bellcurve{mean}{standard deviation}` before `\end{document}` in the current note. Texpad adds `\usepackage{texpadbellcurve}` to the preamble and bundles the drawing package for its PDF preview. You can also download the standalone graph as a white-background PDF, PNG, or JPG.
 
 **Notes** at `#notes` supports multiple named drafts. Choosing Study notes, Problem set, Article, or Blank Markdown in the Template picker opens that template immediately. An untouched template draft changes in place; an edited draft is kept while a new draft opens. LaTeX notes start with a full preamble. The browser compiles them with pdfLaTeX and shows the PDF in a built-in viewer with page navigation and zoom controls. Export the `.tex` source or the compiled PDF, or import a `.tex` file. The bundled TeX Live core includes common packages such as `amsmath` and `amssymb`; a package outside that bundle produces a compilation error.
 
-In a LaTeX note, **Add bell curve** inserts an editable standard-normal LaTeX `picture` block at the cursor (or before `\end{document}` if the cursor is outside the document body). Use the Bell curve workspace to choose other mean and standard-deviation values before inserting its graph.
+In a LaTeX note, **Add bell curve** inserts `\bellcurve{0}{1}` at the cursor (or before `\end{document}` if the cursor is outside the document body). Edit the two numbers in the command or use the Bell curve workspace to choose them. To compile a downloaded `.tex` file outside Texpad, download `texpadbellcurve.sty` from the note footer and put it beside the `.tex` file.
 
 On desktop, Texpad fills the browser window. Drag the divider between the source and preview to resize them, or focus it and use the arrow, Home, and End keys. The split is remembered in this browser. On phones, use the Edit and Preview tabs.
 

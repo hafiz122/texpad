@@ -51,48 +51,7 @@ export function makeBellCurve(mean, sigma) {
   return svg;
 }
 
-function latexNumber(value) {
-  const text = formatTick(value);
-  const scientific = text.match(/^(-?\d+(?:\.\d+)?)e([+-]?\d+)$/);
-  return scientific ? `${scientific[1]}\\times 10^{${Number(scientific[2])}}` : text;
-}
-
 export function makeBellCurveLatex(mean, sigma) {
   validateParameters(mean, sigma);
-  const left = 12;
-  const width = 296;
-  const baseline = 43;
-  const height = 93;
-  const x = (z) => left + (z + 4) * width / 8;
-  const y = (z) => baseline + height * Math.exp(-z * z / 2);
-  const point = (px, py) => `(${px.toFixed(2)},${py.toFixed(2)})`;
-  const curve = Array.from({ length: 64 }, (_, index) => {
-    const z0 = -4 + index / 8;
-    const z1 = z0 + 1 / 8;
-    const zMid = (z0 + z1) / 2;
-    const controlY = 2 * y(zMid) - (y(z0) + y(z1)) / 2;
-    return `\\qbezier${point(x(z0), y(z0))}${point(x(zMid), controlY)}${point(x(z1), y(z1))}`;
-  });
-  const ticks = [-3, -2, -1, 0, 1, 2, 3].flatMap((z) => [
-    `\\put(${x(z).toFixed(2)},39){\\line(0,1){8}}`,
-    `\\put(${x(z).toFixed(2)},27){\\makebox(0,0){\\scriptsize $${latexNumber(mean + z * sigma)}$}}`,
-  ]);
-
-  return [
-    '% Bell curve: vector graph drawn with standard LaTeX picture commands.',
-    '\\begin{center}',
-    '\\begingroup',
-    '\\setlength{\\unitlength}{1pt}',
-    '\\begin{picture}(320,166)',
-    `\\put(160,154){\\makebox(0,0){\\small Normal distribution ($\\mu=${latexNumber(mean)}$, $\\sigma=${latexNumber(sigma)}$)}}`,
-    '\\linethickness{0.45pt}',
-    `\\put(${left},${baseline}){\\line(1,0){${width}}}`,
-    ...ticks,
-    '\\linethickness{0.95pt}',
-    ...curve,
-    '\\put(160,8){\\makebox(0,0){\\scriptsize Value}}',
-    '\\end{picture}',
-    '\\endgroup',
-    '\\end{center}',
-  ].join('\n');
+  return `\\bellcurve{${mean}}{${sigma}}`;
 }

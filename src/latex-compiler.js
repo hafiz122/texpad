@@ -1,3 +1,5 @@
+import bellCurvePackage from './texpadbellcurve.sty?raw';
+
 let compilerPromise;
 let compileQueue = Promise.resolve();
 
@@ -31,7 +33,10 @@ export function compileLatex(source) {
     try {
       result = await compiler.compile({
         mainTex: 'note.tex',
-        files: [{ path: 'note.tex', content: source }],
+        files: [
+          { path: 'note.tex', content: source },
+          { path: 'texpadbellcurve.sty', content: bellCurvePackage },
+        ],
         timeoutMs: 45000,
       });
     } catch (error) {

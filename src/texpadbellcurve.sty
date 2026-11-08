@@ -1,0 +1,70 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{texpadbellcurve}[2026/11/08 Bell curve for Texpad]
+\RequirePackage{expl3}
+
+\ExplSyntaxOn
+\cs_new:Npn \texpadbellcurve_number:n #1
+  { \fp_eval:n { round((#1), 8) } }
+
+\NewDocumentCommand{\bellcurve}{mm}
+  {
+    \begin{center}
+    \begingroup
+    \setlength{\unitlength}{1pt}
+    \begin{picture}(320,166)
+      \put(160,154){\makebox(0,0){\small Normal~distribution~($\mu=\texpadbellcurve_number:n{#1}$, $\sigma=\texpadbellcurve_number:n{#2}$)}}
+      \linethickness{0.45pt}
+      \put(12,43){\line(1,0){296}}
+      \put(49,39){\line(0,1){8}}
+      \put(86,39){\line(0,1){8}}
+      \put(123,39){\line(0,1){8}}
+      \put(160,39){\line(0,1){8}}
+      \put(197,39){\line(0,1){8}}
+      \put(234,39){\line(0,1){8}}
+      \put(271,39){\line(0,1){8}}
+      \put(49,27){\makebox(0,0){\scriptsize $\mu-3\sigma$}}
+      \put(86,27){\makebox(0,0){\scriptsize $\mu-2\sigma$}}
+      \put(123,27){\makebox(0,0){\scriptsize $\mu-\sigma$}}
+      \put(160,27){\makebox(0,0){\scriptsize $\mu$}}
+      \put(197,27){\makebox(0,0){\scriptsize $\mu+\sigma$}}
+      \put(234,27){\makebox(0,0){\scriptsize $\mu+2\sigma$}}
+      \put(271,27){\makebox(0,0){\scriptsize $\mu+3\sigma$}}
+      \linethickness{0.95pt}
+      \qbezier(12.00,43.03)(16.63,43.05)(21.25,43.08)
+      \qbezier(21.25,43.08)(25.88,43.12)(30.50,43.20)
+      \qbezier(30.50,43.20)(35.13,43.29)(39.75,43.47)
+      \qbezier(39.75,43.47)(44.38,43.66)(49.00,44.03)
+      \qbezier(49.00,44.03)(53.63,44.41)(58.25,45.12)
+      \qbezier(58.25,45.12)(62.88,45.83)(67.50,47.09)
+      \qbezier(67.50,47.09)(72.13,48.34)(76.75,50.40)
+      \qbezier(76.75,50.40)(81.38,52.46)(86.00,55.59)
+      \qbezier(86.00,55.59)(90.63,58.72)(95.25,63.11)
+      \qbezier(95.25,63.11)(99.88,67.52)(104.50,73.19)
+      \qbezier(104.50,73.19)(109.13,78.89)(113.75,85.58)
+      \qbezier(113.75,85.58)(118.38,92.29)(123.00,99.41)
+      \qbezier(123.00,99.41)(127.63,106.54)(132.25,113.20)
+      \qbezier(132.25,113.20)(136.88,119.86)(141.50,125.07)
+      \qbezier(141.50,125.07)(146.13,130.27)(150.75,133.14)
+      \qbezier(150.75,133.14)(155.38,135.98)(160.00,136.00)
+      \qbezier(160.00,136.00)(164.63,135.98)(169.25,133.14)
+      \qbezier(169.25,133.14)(173.88,130.27)(178.50,125.07)
+      \qbezier(178.50,125.07)(183.13,119.86)(187.75,113.20)
+      \qbezier(187.75,113.20)(192.38,106.54)(197.00,99.41)
+      \qbezier(197.00,99.41)(201.63,92.29)(206.25,85.58)
+      \qbezier(206.25,85.58)(210.88,78.89)(215.50,73.19)
+      \qbezier(215.50,73.19)(220.13,67.52)(224.75,63.11)
+      \qbezier(224.75,63.11)(229.38,58.72)(234.00,55.59)
+      \qbezier(234.00,55.59)(238.63,52.46)(243.25,50.40)
+      \qbezier(243.25,50.40)(247.88,48.34)(252.50,47.09)
+      \qbezier(252.50,47.09)(257.13,45.83)(261.75,45.12)
+      \qbezier(261.75,45.12)(266.38,44.41)(271.00,44.03)
+      \qbezier(271.00,44.03)(275.63,43.66)(280.25,43.47)
+      \qbezier(280.25,43.47)(284.88,43.29)(289.50,43.20)
+      \qbezier(289.50,43.20)(294.13,43.12)(298.75,43.08)
+      \qbezier(298.75,43.08)(303.38,43.05)(308.00,43.03)
+      \put(160,8){\makebox(0,0){\scriptsize Value}}
+    \end{picture}
+    \endgroup
+    \end{center}
+  }
+\ExplSyntaxOff

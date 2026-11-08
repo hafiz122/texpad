@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import { openDB } from 'idb';
 import { noteTemplates, templateFor } from './latex-templates.js';
 import { makeBellCurveLatex } from './bell-curve.js';
+import bellCurvePackage from './texpadbellcurve.sty?raw';
 
 const element = (id) => document.getElementById(id);
 const list = element('notes-list');
@@ -27,6 +28,7 @@ const vimMount = element('notes-vim-editor');
 const vimTrail = element('notes-vim-trail');
 const templateSelect = element('notes-template');
 const downloadButton = element('notes-download');
+const packageDownloadButton = element('notes-package-download');
 const printButton = element('notes-print-button');
 const splitGrid = document.querySelector('.notes-editor-preview');
 const divider = element('notes-divider');
@@ -124,6 +126,7 @@ function renderNoteList() {
 function markEdited() {
   const note = activeNote();
   if (!note) return;
+  packageDownloadButton.hidden = formatOf(note) !== 'latex' || !/\\bellcurve\s*\{/.test(note.body);
   note.updatedAt = Date.now();
   revision += 1;
   setSaveState(database ? 'Saving…' : 'Not saved — download the source file to keep this note.', database ? 'loading' : 'error');
@@ -319,7 +322,7 @@ function downloadBlob(blob, filename) {
 }
 
 function downloadText(text, filename) {
-  const type = filename.endsWith('.tex') ? 'application/x-tex;charset=utf-8' : 'text/markdown;charset=utf-8';
+  const type = /\.(tex|sty)$/.test(filename) ? 'application/x-tex;charset=utf-8' : 'text/markdown;charset=utf-8';
   downloadBlob(new Blob([text], { type }), filename);
 }
 
@@ -560,6 +563,7 @@ function showActive() {
       ? 'Full LaTeX source. Edit \\title in the preamble to change the PDF title. Common packages are bundled.'
       : 'Markdown text; $...$ for inline math and $$...$$ for display math.';
     downloadButton.textContent = latex ? 'Download .tex' : 'Download .md';
+    packageDownloadButton.hidden = !latex || !/\\bellcurve\s*\{/.test(note.body);
     printButton.textContent = latex ? 'Download PDF' : 'Print / Save PDF';
     printButton.disabled = latex;
     element('notes-curve-button').hidden = !latex;
@@ -633,15 +637,23 @@ async function insertBellCurve(latex, { atCursor = false } = {}) {
   }
   const cursor = vimView ? vimView.state.selection.main.head : bodyInput.selectionStart;
   const position = atCursor && cursor >= start + '\\begin{document}'.length && cursor <= end ? cursor : end;
+  const preamble = note.body.slice(0, start);
+  const packageLine = /(?:^|\n)[ \t]*\\(?:usepackage|RequirePackage)(?:\[[^\]]*\])?\{[^}]*\btexpadbellcurve\b[^}]*\}/.test(preamble)
+    ? '' : '\\usepackage{texpadbellcurve}\n';
   const before = note.body.slice(0, position);
   const after = note.body.slice(position);
   const prefix = before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
   const suffix = after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : '\n\n';
   const insert = `${prefix}${latex}${suffix}`;
   if (vimView) {
-    vimView.dispatch({ changes: { from: position, insert }, selection: { anchor: position + insert.length } });
+    const changes = packageLine
+      ? [{ from: start, insert: packageLine }, { from: position, insert }]
+      : { from: position, insert };
+    vimView.dispatch({ changes, selection: { anchor: position + packageLine.length + insert.length } });
   } else {
-    bodyInput.setRangeText(insert, position, position, 'end');
+    bodyInput.value = `${note.body.slice(0, start)}${packageLine}${note.body.slice(start, position)}${insert}${note.body.slice(position)}`;
+    const anchor = position + packageLine.length + insert.length;
+    bodyInput.setSelectionRange(anchor, anchor);
     note.body = bodyInput.value;
     markEdited();
     schedulePreview();
@@ -799,6 +811,7 @@ export async function initNotes(options) {
     const note = activeNote();
     if (note) downloadText(note.body, filenameFor(note));
   });
+  packageDownloadButton.addEventListener('click', () => downloadText(bellCurvePackage, 'texpadbellcurve.sty'));
   printButton.addEventListener('click', printNote);
   for (const tab of ['edit', 'preview']) {
     element(`notes-${tab}-tab`).addEventListener('click', () => {
