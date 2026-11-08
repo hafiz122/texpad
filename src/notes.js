@@ -1,7 +1,7 @@
 import { Marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { openDB } from 'idb';
-import { templateFor } from './latex-templates.js';
+import { noteTemplates, templateFor } from './latex-templates.js';
 
 const element = (id) => document.getElementById(id);
 const list = element('notes-list');
@@ -591,6 +591,27 @@ function newNote() {
   return createNote(template.title, template.body, template.format);
 }
 
+async function switchTemplate() {
+  const template = templateFor(templateSelect.value);
+  const note = activeNote();
+  const untouched = note && Object.values(noteTemplates).some((candidate) =>
+    note.title === candidate.title && note.body === candidate.body && note.format === candidate.format);
+  if (!untouched) return createNote(template.title, template.body, template.format);
+
+  await saveCurrent();
+  const wasVim = Boolean(vimView);
+  if (wasVim) stopVim();
+  note.title = template.title;
+  note.body = template.body;
+  note.format = template.format;
+  note.updatedAt = Date.now();
+  revision += 1;
+  showActive();
+  await saveRecord(note);
+  if (wasVim) await startVim();
+  else bodyInput.focus();
+}
+
 async function insertBellCurve(latex) {
   let note = activeNote();
   let created = false;
@@ -736,6 +757,7 @@ export async function initNotes(options) {
     if (button) selectNote(button.dataset.noteId);
   });
   picker.addEventListener('change', () => selectNote(picker.value));
+  templateSelect.addEventListener('change', switchTemplate);
   element('notes-new').addEventListener('click', () => newNote());
   element('notes-new-mobile').addEventListener('click', () => newNote());
   element('notes-new-empty').addEventListener('click', () => newNote());
