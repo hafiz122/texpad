@@ -24,6 +24,7 @@
         <div class="header-tools">
           <nav class="mode-nav" aria-label="Workspace">
             <a id="equation-link" href="#equation">Equation</a>
+            <a id="curve-link" href="#curve">Bell curve</a>
             <a id="notes-link" href="#notes">Notes</a>
           </nav>
           <label id="vim-theme-control" class="theme-control" for="vim-theme">Theme:
@@ -86,6 +87,48 @@
           </section>
         </div>
         <div class="status-bar"><strong>Status:</strong><p id="status" class="status" role="status" aria-live="polite">Enter an equation to begin.</p></div>
+        </section>
+
+        <section id="curve-view" aria-labelledby="curve-title" hidden>
+          <p class="instructions">Draw a normal distribution. Change the mean and standard deviation to label the horizontal axis.</p>
+          <div class="workspace curve-workspace">
+            <section class="editor-panel" aria-labelledby="curve-title">
+              <div class="panel-heading">
+                <h2 id="curve-title">Bell curve</h2>
+                <span class="panel-detail">Normal distribution</span>
+              </div>
+              <div class="curve-controls">
+                <label for="curve-mean">Mean (μ)
+                  <input id="curve-mean" type="number" value="0" step="any" inputmode="decimal" />
+                </label>
+                <label for="curve-sigma">Standard deviation (σ)
+                  <input id="curve-sigma" type="number" value="1" min="0.000001" step="any" inputmode="decimal" />
+                </label>
+                <p id="curve-help">The curve spans four standard deviations on either side of the mean.</p>
+              </div>
+            </section>
+            <section class="preview-panel" aria-labelledby="curve-preview-title">
+              <div class="panel-heading">
+                <h2 id="curve-preview-title">Preview</h2>
+                <span id="curve-preview-state" class="preview-state">Ready</span>
+              </div>
+              <div class="preview-scroll curve-preview-scroll" role="region" tabindex="0" aria-label="Bell curve preview">
+                <div id="curve-preview" class="curve-preview"></div>
+              </div>
+              <div class="export-area">
+                <div class="export-copy">
+                  <strong>Save bell curve:</strong>
+                  <span>White background in downloads</span>
+                </div>
+                <div class="export-buttons" aria-label="Download bell curve">
+                  <button class="export-button curve-export-button" type="button" data-format="pdf">Save PDF</button>
+                  <button class="export-button curve-export-button" type="button" data-format="png">Save PNG</button>
+                  <button class="export-button curve-export-button" type="button" data-format="jpg">Save JPG</button>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="status-bar"><strong>Status:</strong><p id="curve-status" class="status" role="status" aria-live="polite">Bell curve ready to download.</p></div>
         </section>
 
         <section id="notes-view" aria-labelledby="notes-title" hidden>
@@ -156,7 +199,22 @@
                       <span id="notes-preview-state" role="status" aria-live="polite">Waiting for input</span>
                     </div>
                     <div id="notes-preview" class="notes-preview"></div>
-                    <iframe id="notes-pdf-preview" class="notes-pdf-preview" title="Compiled LaTeX PDF preview" hidden></iframe>
+                    <div id="notes-pdf-viewer" class="notes-pdf-viewer" hidden>
+                      <div class="notes-pdf-toolbar" role="toolbar" aria-label="PDF viewer controls">
+                        <button id="notes-pdf-previous" class="classic-button" type="button" disabled>Previous</button>
+                        <label for="notes-pdf-page-number">Page <input id="notes-pdf-page-number" type="number" min="1" value="1" inputmode="numeric" /></label>
+                        <span id="notes-pdf-page-count">/ 1</span>
+                        <button id="notes-pdf-next" class="classic-button" type="button" disabled>Next</button>
+                        <span class="notes-pdf-toolbar-gap"></span>
+                        <button id="notes-pdf-zoom-out" class="classic-button" type="button" aria-label="Zoom out">−</button>
+                        <span id="notes-pdf-zoom-label">Fit width</span>
+                        <button id="notes-pdf-zoom-in" class="classic-button" type="button" aria-label="Zoom in">+</button>
+                        <button id="notes-pdf-fit" class="classic-button" type="button">Fit width</button>
+                      </div>
+                      <div id="notes-pdf-scroll" class="notes-pdf-scroll" role="region" tabindex="0" aria-label="Compiled PDF pages">
+                        <div id="notes-pdf-page" class="notes-pdf-page">Compiling PDF…</div>
+                      </div>
+                    </div>
                     <div id="notes-compile-error" class="notes-compile-error" role="alert" hidden>
                       <strong>LaTeX could not compile.</strong>
                       <pre id="notes-compile-message"></pre>

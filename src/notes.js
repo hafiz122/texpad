@@ -12,7 +12,7 @@ const documentPanel = element('notes-document');
 const nameInput = element('notes-name');
 const bodyInput = element('notes-body');
 const preview = element('notes-preview');
-const pdfPreview = element('notes-pdf-preview');
+const pdfPreview = element('notes-pdf-viewer');
 const compileError = element('notes-compile-error');
 const previewState = element('notes-preview-state');
 const saveState = element('notes-save-state');
@@ -46,8 +46,8 @@ let vimHighlighting;
 let cursor;
 let getTheme;
 let pendingDeleteId = null;
-let pdfUrl = null;
 let pdfBytes = null;
+let pdfViewer = null;
 let editorWidth = 50;
 
 function setEditorWidth(percent, persist = false) {
@@ -209,36 +209,42 @@ async function mathJaxReady() {
 
 function clearPdfPreview() {
   pdfBytes = null;
-  pdfPreview.removeAttribute('src');
+  pdfViewer?.clear();
   pdfPreview.hidden = true;
-  if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-  pdfUrl = null;
 }
 
 async function renderLatexPreview(note, sequence) {
   previewState.textContent = 'Compiling LaTeX';
   printButton.disabled = true;
+  let compiledBytes = null;
   try {
     const { compileLatex } = await import('./latex-compiler.js');
     const bytes = await compileLatex(note.body);
+    compiledBytes = bytes;
     if (sequence !== renderSequence || note.id !== activeId) return false;
-    const nextUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    const { createPdfViewer } = await import('./pdf-viewer.js');
+    if (sequence !== renderSequence || note.id !== activeId) return false;
     clearPdfPreview();
-    pdfUrl = nextUrl;
     pdfBytes = bytes;
-    pdfPreview.src = pdfUrl;
-    pdfPreview.hidden = false;
+    pdfViewer ??= createPdfViewer();
+    printButton.disabled = false;
+    if (!await pdfViewer.load(bytes) || sequence !== renderSequence || note.id !== activeId) return false;
     compileError.hidden = true;
     previewState.textContent = 'Ready · PDF';
     printButton.disabled = false;
     return true;
   } catch (error) {
     if (sequence !== renderSequence || note.id !== activeId) return false;
-    clearPdfPreview();
+    const compiled = Boolean(compiledBytes);
+    if (compiled) {
+      pdfViewer?.clear();
+      pdfPreview.hidden = true;
+    } else clearPdfPreview();
+    compileError.querySelector('strong').textContent = compiled ? 'PDF preview could not load. Download the PDF to view it.' : 'LaTeX could not compile.';
     element('notes-compile-message').textContent = error.message || 'Check the LaTeX source.';
     element('notes-compile-log').textContent = error.log || String(error);
     compileError.hidden = false;
-    previewState.textContent = 'Check LaTeX';
+    previewState.textContent = compiled ? 'PDF preview error' : 'Check LaTeX';
     return false;
   }
 }

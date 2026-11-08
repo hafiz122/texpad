@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import * as themeTools from './site-theme.js';
+import { makeBellCurve } from './bell-curve.js';
 import './style.css';
 
 const input = document.querySelector('#latex-input');
@@ -15,10 +16,19 @@ const previewViewport = document.querySelector('.preview-scroll');
 const previewState = document.querySelector('#preview-state');
 const status = document.querySelector('#status');
 const exportButtons = [...document.querySelectorAll('.export-button')];
+const equationExportButtons = [...document.querySelectorAll('#equation-view .export-button')];
+const curveExportButtons = [...document.querySelectorAll('.curve-export-button')];
 const equationView = document.querySelector('#equation-view');
+const curveView = document.querySelector('#curve-view');
 const notesView = document.querySelector('#notes-view');
 const equationLink = document.querySelector('#equation-link');
+const curveLink = document.querySelector('#curve-link');
 const notesLink = document.querySelector('#notes-link');
+const curveMean = document.querySelector('#curve-mean');
+const curveSigma = document.querySelector('#curve-sigma');
+const curvePreview = document.querySelector('#curve-preview');
+const curvePreviewState = document.querySelector('#curve-preview-state');
+const curveStatus = document.querySelector('#curve-status');
 let notesApp;
 let notesLoading;
 
@@ -78,7 +88,25 @@ function updateStatus(message, kind = 'idle') {
 }
 
 function setDownloadsEnabled(enabled) {
-  for (const button of exportButtons) button.disabled = !enabled;
+  for (const button of equationExportButtons) button.disabled = !enabled;
+}
+
+function updateCurve() {
+  try {
+    if (!curveMean.value || !curveSigma.value) throw new Error('Enter a mean and a standard deviation.');
+    const svg = makeBellCurve(Number(curveMean.value), Number(curveSigma.value));
+    curvePreview.replaceChildren(svg);
+    curvePreviewState.textContent = 'Ready';
+    curveStatus.textContent = 'Bell curve ready to download.';
+    curveStatus.dataset.kind = 'ready';
+    for (const button of curveExportButtons) button.disabled = false;
+  } catch (error) {
+    curvePreview.replaceChildren();
+    curvePreviewState.textContent = 'Check input';
+    curveStatus.textContent = error.message;
+    curveStatus.dataset.kind = 'error';
+    for (const button of curveExportButtons) button.disabled = true;
+  }
 }
 
 function fitPreview() {
@@ -387,11 +415,13 @@ function makeStandaloneSvg(svg, width, height) {
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   clone.setAttribute('width', `${width}px`);
   clone.setAttribute('height', `${height}px`);
-  clone.setAttribute('style', 'color:#202a24');
-  const glyphs = clone.querySelector('g');
-  if (glyphs) {
-    glyphs.setAttribute('fill', '#202a24');
-    glyphs.setAttribute('stroke', '#202a24');
+  if (svg.id !== 'bell-curve-svg') {
+    clone.setAttribute('style', 'color:#202a24');
+    const glyphs = clone.querySelector('g');
+    if (glyphs) {
+      glyphs.setAttribute('fill', '#202a24');
+      glyphs.setAttribute('stroke', '#202a24');
+    }
   }
   return new XMLSerializer().serializeToString(clone);
 }
@@ -450,13 +480,23 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-async function download(format) {
-  if (!renderedSvg || !renderedSize || exporting) return;
+async function download(format, kind = 'equation') {
+  const curve = kind === 'bell-curve';
+  const svg = curve ? curvePreview.querySelector('svg') : renderedSvg;
+  const size = curve ? { width: 720, height: 400 } : renderedSize;
+  if (!svg || !size || exporting) return;
+  const buttons = curve ? curveExportButtons : equationExportButtons;
+  const report = (message, state) => {
+    if (curve) {
+      curveStatus.textContent = message;
+      curveStatus.dataset.kind = state;
+    } else updateStatus(message, state);
+  };
   exporting = true;
-  setDownloadsEnabled(false);
-  updateStatus(`Preparing ${format.toUpperCase()}…`, 'loading');
+  for (const button of buttons) button.disabled = true;
+  report(`Preparing ${format.toUpperCase()}…`, 'loading');
   try {
-    const { canvas, logicalWidth, logicalHeight } = await rasterize(renderedSvg, renderedSize);
+    const { canvas, logicalWidth, logicalHeight } = await rasterize(svg, size);
     if (format === 'pdf') {
       const pageWidth = logicalWidth * 0.75;
       const pageHeight = logicalHeight * 0.75;
@@ -467,18 +507,18 @@ async function download(format) {
         compress: true,
       });
       pdf.addImage(canvas, 'PNG', 0, 0, pageWidth, pageHeight);
-      pdf.save('texpad-equation.pdf');
+      pdf.save(`texpad-${kind}.pdf`);
     } else {
       const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
       const blob = await blobFromCanvas(canvas, mimeType, 0.94);
-      downloadBlob(blob, `texpad-equation.${format}`);
+      downloadBlob(blob, `texpad-${kind}.${format}`);
     }
-    updateStatus(`${format.toUpperCase()} downloaded.`, 'ready');
+    report(`${format.toUpperCase()} downloaded.`, 'ready');
   } catch (error) {
-    updateStatus(error.message || `Could not download ${format.toUpperCase()}.`, 'error');
+    report(error.message || `Could not download ${format.toUpperCase()}.`, 'error');
   } finally {
     exporting = false;
-    setDownloadsEnabled(Boolean(renderedSvg));
+    for (const button of buttons) button.disabled = curve ? !curvePreview.querySelector('svg') : !renderedSvg;
   }
 }
 
@@ -495,16 +535,22 @@ exampleButton.addEventListener('click', () => {
   }
 });
 for (const button of exportButtons) {
-  button.addEventListener('click', () => download(button.dataset.format));
+  button.addEventListener('click', () => download(button.dataset.format, button.classList.contains('curve-export-button') ? 'bell-curve' : 'equation'));
 }
+curveMean.addEventListener('input', updateCurve);
+curveSigma.addEventListener('input', updateCurve);
+updateCurve();
 
 async function showWorkspace() {
   const notesMode = window.location.hash === '#notes';
-  equationView.hidden = notesMode;
+  const curveMode = window.location.hash === '#curve';
+  equationView.hidden = notesMode || curveMode;
+  curveView.hidden = !curveMode;
   notesView.hidden = !notesMode;
-  equationLink.setAttribute('aria-current', notesMode ? 'false' : 'page');
+  equationLink.setAttribute('aria-current', notesMode || curveMode ? 'false' : 'page');
+  curveLink.setAttribute('aria-current', curveMode ? 'page' : 'false');
   notesLink.setAttribute('aria-current', notesMode ? 'page' : 'false');
-  document.title = notesMode ? 'Texpad · Study notes' : 'Texpad · Math to PDF, PNG, JPG';
+  document.title = notesMode ? 'Texpad · Study notes' : curveMode ? 'Texpad · Bell curve' : 'Texpad · Math to PDF, PNG, JPG';
   if (notesMode && !notesApp) {
     try {
       notesLoading ??= import('./notes.js').then(({ initNotes }) => initNotes({ getTheme: () => themeTools.getTheme(selectedTheme) }));
